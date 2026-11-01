@@ -1,0 +1,4 @@
+gen,stage,stage_gen,steps,secs,steps_per_s,flights,hard,wind,turbulence,steady,boulder,boulder_size,support,goal_mix,best,mean,champ_fit,champ_landed,champ_score,champ_boulder,champ_timeout,champ_offpad,champ_touchdown,hidden,conns,species,threshold,check_landed,goal_landed,goal_boulder,goal_timeout,goal_offpad
+0,1 calm landing,0,986442,21.4,45181,16,0,0,0,0.0,0,1.0,1.0,0.0,108.4,-342.1,97.7,0.286,40.0,0.0,0.0,0.036,0.134,32,640,1,0.25,,0.0,0.28,0.0,0.005
+1,1 calm landing,1,1747787,19.1,39933,16,0,0,0,0.0,0,1.0,0.99,0.0,169.8,-144.8,184.6,0.518,109.5,0.0,0.018,0.071,0.115,32,640,14,0.225,,,,,
+2,1 calm landing,2,2520641,19.5,39731,16,0,0,0,0.0,0,1.0,0.98,0.0,139.3,-120.7,157.6,0.464,96.9,0.0,0.054,0.036,0.147,32,640,14,0.248,,,,,

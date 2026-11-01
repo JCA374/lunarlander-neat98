@@ -1,6 +1,7 @@
 """Policies the evaluators can load, all called as policy(inputs, flight) -> action (0-3).
 
     teacher:v1 / teacher:v2        the hand-written pilot with its tuned gains
+    runs/R/champions/x.json        a NEAT genome (lander/neatnet.py to_json, "kind": "neat")
     models/x.json                  a numpy MLP: either the old clone format (W1,b1,W2,b2) or
                                    {"layers": [[W, b], ...], "mean": [...], "std": [...], "act": "tanh"}
 A policy only ever sees flight.inputs() (lander/env.py inputs()): the 8 observations and sensors computed
@@ -45,5 +46,9 @@ def load_policy(spec):
         name = {'v1': 'teacher_params_v1.json', 'v2': 'teacher_params_v2.json'}.get(v, v)
         return Teacher(load_params(os.path.join(ROOT, 'lander', name)))
     if spec.endswith('.json'):
-        return NumpyMLP(json.load(open(spec)))
+        d = json.load(open(spec))
+        if d.get('kind') == 'neat':
+            from lander.neatnet import NeatJsonNet
+            return NeatJsonNet(d)
+        return NumpyMLP(d)
     raise ValueError(f'unknown policy {spec}')

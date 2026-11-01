@@ -113,3 +113,39 @@ def test_boulder_v3_keeps_v2_radius_and_x():
         r, x = rng.uniform(0.8, 1.3), 10 + rng.uniform(-2.5, 2.5)
         bx, _, br = boulder_spec(s)
         assert (bx, br) == (x, r)
+
+
+# ---- NEAT ------------------------------------------------------------------------------------------------------
+def _neat_config():
+    import neat
+    from lander.neatnet import RandomStartGenome
+    return neat.Config(RandomStartGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet, neat.DefaultStagnation,
+                       os.path.join(ROOT, 'neat-config.ini'))
+
+
+def test_neat_json_net_matches_neat_python():
+    """The network every tool flies (NeatJsonNet) computes exactly what neat-python computes, also after mutations
+    that add and delete nodes and connections."""
+    import neat
+    from lander.neatnet import to_json, NeatJsonNet
+    cfg = _neat_config()
+    pop = neat.Population(cfg)
+    gs = list(pop.population.values())[:6]
+    for g in gs[3:]:
+        for _ in range(30):
+            g.mutate(cfg.genome_config)
+    X = np.random.default_rng(2).normal(0, 1, (300, 16))
+    for g in gs:
+        ref = neat.nn.FeedForwardNetwork.create(g, cfg)
+        me = NeatJsonNet(to_json(g, cfg))
+        assert np.allclose([ref.activate(list(x / me.scale)) for x in X], [me.activate(x) for x in X])
+
+
+def test_neat_start_is_random_not_copied():
+    """Clean start: 32 hidden nodes, 640 connections, and two genomes have different weights."""
+    import neat
+    from lander.neatnet import size
+    pop = neat.Population(_neat_config())
+    a, b = list(pop.population.values())[:2]
+    assert size(a) == (32, 640)
+    assert any(abs(a.connections[k].weight - b.connections[k].weight) > 1e-6 for k in a.connections)
