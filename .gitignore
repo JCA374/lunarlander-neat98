@@ -17,3 +17,4 @@ build/
 *.so
 runs/*/dash/
 runs/*/champion_now.json*
+voice/*/audio/
