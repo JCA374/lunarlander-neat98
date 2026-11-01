@@ -1,49 +1,110 @@
 {
  "name": "N1",
- "note": "Run N1: NEAT from random genomes (16 -> 32 random tanh hidden -> 4; NEAT adds and deletes nodes and connections freely), population 300, ~12 species. Every genome of a generation flies the same seeds; the top 10 re-fly 40 selection seeds. Pay: 0.3 x game score + 300 per landing - 200 per timeout - 100 per boulder touch. Stop when the champion lands >= 95% (200 real-task flights, then 1,000 fresh selection flights), or Friday 2026-11-06 17:00.",
+ "note": "Run N1: NEAT from random genomes (16 -> 32 random tanh hidden -> 4; NEAT adds and deletes nodes and connections freely), population 300, ~12 species. Every genome of a generation flies the same seeds; the top 10 re-fly 40 selection seeds. Pay: 0.3 x game score + 300 per landing - 200 per timeout - 100 per boulder touch. Stop when the champion lands >= 95% (200 real-task flights, then 1,000 fresh selection flights), or Friday 2026-11-06 17:00. Changed at gen 220: ramps are paced by the champion's landing rate, stage 2 mixes in 25% small-boulder flights, and the stage's final world is checked every 10 generations from the start (it can only pass once the ramp is done).",
  "start_hidden": 32,
  "stages": [
   {
    "name": "1 calm landing",
-   "world": {"wind": 0, "turbulence": 0},
-   "support": [1.0, 0.0],
+   "world": {
+    "wind": 0,
+    "turbulence": 0
+   },
+   "support": [
+    1.0,
+    0.0
+   ],
    "ramp_frac": 0.4,
    "cap": 250,
    "flights": 16,
-   "reward": {"score_weight": 0.3, "landing_bonus": 300, "timeout_penalty": 200, "boulder_penalty": 100},
-   "pass": {"landed": 0.9, "timeout": 0.05},
+   "reward": {
+    "score_weight": 0.3,
+    "landing_bonus": 300,
+    "timeout_penalty": 200,
+    "boulder_penalty": 100
+   },
+   "pass": {
+    "landed": 0.9,
+    "timeout": 0.05
+   },
    "expect": "Random networks crash at once. With training wheels (an upright torque fading 1 -> 0 over 100 generations) they should learn to hover, descend and land in calm air; >= 90% calm landings without wheels within ~150-250 generations. The real-task line stays low (no wind skill yet)."
   },
   {
    "name": "2 wind ramp",
-   "world": {},
-   "ramp": {"wind": [5, 15], "steady": [1.0, 0.0], "turbulence": [0, 1.5]},
+   "world": {
+    "boulder_mix": 0.25,
+    "boulder_size": 0.4
+   },
+   "ramp": {
+    "wind": [
+     5,
+     15
+    ],
+    "steady": [
+     1.0,
+     0.0
+    ],
+    "turbulence": [
+     0,
+     1.5
+    ]
+   },
    "ramp_frac": 0.5,
    "cap": 400,
    "flights": 24,
-   "reward": {"score_weight": 0.3, "landing_bonus": 300, "timeout_penalty": 200, "boulder_penalty": 100},
-   "pass": {"landed": 0.85, "timeout": 0.05},
-   "expect": "Over 200 generations the push grows from a steady 5 to the full gusty 15 plus turbulence 1.5. The networks must start using the clean wind estimate (input 16). Expect a dip while the gusts grow, then >= 85% landings in full wind without a boulder."
+   "reward": {
+    "score_weight": 0.3,
+    "landing_bonus": 300,
+    "timeout_penalty": 200,
+    "boulder_penalty": 100
+   },
+   "pass": {
+    "landed": 0.85,
+    "timeout": 0.05
+   },
+   "expect": "Over up to 200 generations the push grows from a steady 5 to the full gusty 15 plus turbulence 1.5. From gen 220 the ramp is paced: it moves 3x faster while the champion lands >= 90% of its flights. From gen 220, 25% of flights also carry a small boulder (40% size) so route learning starts early; those flights do not count for the pace or the pass check. Expect a dip while the gusts grow, then >= 85% landings in full wind without a boulder."
   },
   {
    "name": "3 boulder",
-   "world": {"boulder": true, "goal_mix": 0.4},
-   "ramp": {"boulder_size": [0.4, 1.0]},
+   "world": {
+    "boulder": true,
+    "goal_mix": 0.4
+   },
+   "ramp": {
+    "boulder_size": [
+     0.4,
+     1.0
+    ]
+   },
    "ramp_frac": 0.5,
    "cap": 400,
    "flights": 24,
-   "reward": {"score_weight": 0.3, "landing_bonus": 300, "timeout_penalty": 200, "boulder_penalty": 100},
-   "pass": {"landed": 0.85, "timeout": 0.05},
-   "expect": "The boulder (layout v3) grows from 40% to full size over 200 generations; 40% of flights are the full real task (rehearsal). The route sensors (inputs 11-15) start to matter. Expect boulder touches to dominate the failures at first, then >= 85% on the real task."
+   "reward": {
+    "score_weight": 0.3,
+    "landing_bonus": 300,
+    "timeout_penalty": 200,
+    "boulder_penalty": 100
+   },
+   "pass": {
+    "landed": 0.85,
+    "timeout": 0.05
+   },
+   "expect": "The boulder (layout v3) grows from 40% to full size over up to 200 generations (paced like the wind ramp); 40% of flights are the full real task (rehearsal). The route sensors (inputs 11-15) start to matter. Expect boulder touches to dominate the failures at first, then >= 85% on the real task."
   },
   {
    "name": "4 real task + hard cases",
-   "world": {"boulder": true},
+   "world": {
+    "boulder": true
+   },
    "hard_mix": 0.3,
    "final": true,
    "cap": 100000,
    "flights": 32,
-   "reward": {"score_weight": 0.3, "landing_bonus": 300, "timeout_penalty": 200, "boulder_penalty": 100},
+   "reward": {
+    "score_weight": 0.3,
+    "landing_bonus": 300,
+    "timeout_penalty": 200,
+    "boulder_penalty": 100
+   },
    "pass": {},
    "expect": "The long one, no early stop. 30% of each generation's flights re-fly training seeds the recent champions failed (hard cases: PPO went from a 92.7% plateau to ~96% this way). Snapshots every 25 generations. The run stops when a champion holds >= 95% on 1,000 fresh selection flights."
   }
