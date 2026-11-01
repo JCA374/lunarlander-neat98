@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lander NEAT 98: Speed</title>
+<link rel="stylesheet" href="style.css?v=ea0a339d">
+</head>
+<body>
+<main>
+<h1>Speed</h1>
+<p class="lede">Everything runs on one laptop. NEAT needs far more simulated flights than PPO did, so speed decides how many
+generations fit before the deadline. Every speed-up here is measured end to end (flights per second, generations per hour),
+before and after.</p>
+<div class="box"><h3>The machine (measured 2026-11-01)</h3>
+<div class="tablewrap"><table class="t">
+<tr><td>CPU</td><td>Intel Core i5-8250U, 4 cores / 8 threads, up to 3.4 GHz</td></tr>
+<tr><td>RAM</td><td>7.6 GB (+ 4 GB swap)</td></tr>
+<tr><td>GPU</td><td>Intel UHD 620 only: no usable GPU, so everything is CPU</td></tr>
+<tr><td>Software</td><td>Python 3.12, gymnasium 0.29.1 (Box2D 2.3.5), numpy 1.26, g++ 13.3, pybind11</td></tr>
+</table></div>
+<p>Rules: workers × threads ≤ 8, one BLAS thread per worker process (8 workers × 8 threads once gave a load of 34), narration
+and video rendering with <code>nice</code>.</p></div>
+<div class="box"><h3>The budget</h3>
+<p>The last project: the Python reference simulator ran ~18,000–20,000 steps/s across 8 processes. A NEAT generation of 300
+genomes × 32 flights × ~300 steps is about 3 M steps: ~2.5 minutes, so only ~500 generations a day. The target is
+<b>≥ 10× faster</b>: Box2D itself took only 1.5 µs of the 117 µs per step measured before; the rest was Python glue.
+The plan: compile the same Box2D 2.3 in C++, port the lander's step logic and evaluate the network in C++, so one call flies a
+whole batch with no Python in the loop.</p>
+<p><b>The rule that keeps it honest:</b> the C++ simulator is for training only, after a test shows the same seeds and actions
+give the same outcome on ≥ 98% of 1,000 flights and the same agent's landing rate falls inside the reference's confidence
+interval. All checks, the selection and the goal test run in the Python reference.</p></div>
+<div class="box"><h3>Measurements</h3><p><i>Profiles and before/after timings appear here as they are made.</i></p></div>
+</main>
+<script src="site.js?v=7911142a"></script>
+<script src="common.js?v=448bd7f6"></script>
+<script src="project.js?v=9956469d"></script>
+
+</body>
+</html>

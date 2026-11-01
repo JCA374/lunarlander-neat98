@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lander NEAT 98: The model</title>
+<link rel="stylesheet" href="style.css?v=ea0a339d">
+</head>
+<body>
+<main>
+<h1>The model</h1>
+<p class="lede">The pilot is a small neural network: 16 numbers in (<a href="senses.html">what it sees</a>), 4 numbers out, one per
+action (nothing, left engine, main engine, right engine). Each step it fires the action with the highest number. Nobody
+writes its weights: they are <b>evolved</b> with NEAT.</p>
+<div class="box"><h3>What NEAT is</h3>
+<p><b>NeuroEvolution of Augmenting Topologies</b> (Stanley &amp; Miikkulainen, 2002). A <i>population</i> of a few hundred networks
+(<i>genomes</i>) each fly the same set of flights and get one number back, their <i>fitness</i>. The better ones become parents:
+their children are copies with small changes (<i>mutations</i>) and mixes of two parents (<i>crossover</i>). Unlike plain
+evolution of weights, NEAT can also <b>grow the network</b>: add a new connection, or split a connection with a new hidden
+node. Every new gene gets an <i>innovation number</i>, so two networks with different wiring can still be lined up for
+crossover. And NEAT protects new ideas with <b>speciation</b>: genomes are grouped by how similar their wiring is, and compete
+mostly within their species, so a freshly grown structure gets a few generations to tune its weights before it has to beat
+the polished old ones.</p></div>
+<div class="box"><h3>Why NEAT stalled at ~85% two projects ago, and what changes</h3>
+<ul>
+<li><b>One number per flight.</b> PPO learns from every one of the ~300 steps of a flight; NEAT gets only the fitness. Wind makes
+that number noisy, so selection was often luck. Now: many flights per genome (32+), <b>the same seeds for every genome</b>
+in a generation (common random numbers, so differences are the network's, not the weather's), and the top 8–10 re-flown on
+more flights before one is called champion.</li>
+<li><b>Mutations wrecked good networks</b>: children of an 86% parent averaged 70.5%. Now: gentle mutation (most weights nudged a
+little, replacement ≤ 1%), measured: children must not average more than ~3 points below their parent.</li>
+<li><b>A copied pilot is a cage.</b> The old run started from a clone of the hand-written pilot and never left it. Now: a clean
+start, random genomes.</li>
+<li><b>A minimal start is too small.</b> Plain NEAT starts with inputs wired straight to outputs. Here each genome starts with a
+hidden layer of random tanh nodes, its size taken from a measurement (below).</li>
+<li><b>Too slow to afford it.</b> 300 genomes × 32 flights × ~300 steps ≈ 3 M steps per generation. A C++ simulator for training
+(checked against the Python one) aims for ≥ 10× faster. See <a href="speed.html">Speed</a>.</li>
+</ul></div>
+<div class="box"><h3>How big must the network be?</h3>
+<p>Before evolving, I measure it: the PPO champion (16→128→128→4, 98.6% on two test blocks) is copied by imitation (DAgger)
+into small networks, 16→8→4, 16→16→4, 16→32→4, 16→16→16→4, and each copy flies 1,000 fresh flights. The smallest that still
+lands ~98% is the size NEAT must be able to reach. <i>Results appear here when measured.</i> These copies are only a
+yardstick; none is ever used as a starting genome.</p></div>
+<div class="box"><h3>How the champion's network changed</h3>
+<p>Pictures of real champion genomes (nodes, connections, weights) are added here as the run goes, every 25 generations.</p></div>
+</main>
+<script src="site.js?v=7911142a"></script>
+<script src="common.js?v=448bd7f6"></script>
+<script src="project.js?v=9956469d"></script>
+
+</body>
+</html>

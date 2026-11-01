@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lander NEAT 98: Log</title>
+<meta name="description" content="NEAT learns to land a lunar lander in wind, turbulence and past a fair boulder: 98% of unseen flights. Live log.">
+<link rel="stylesheet" href="style.css?v=ea0a339d">
+</head>
+<body>
+<main>
+<header class="hero">
+  <h1>NEAT, from scratch, to 98% landings in wind, turbulence and past a boulder</h1>
+  <p class="lede">An evolved neural network (NEAT: the network's weights <i>and</i> its wiring evolve) flies Gymnasium's Lunar Lander
+    in strong gusty wind (power 15), turbulence (1.5) and past a boulder floating on the way down. <b>Goal: ≥ 98% landed between
+    the flags on 1,000 unseen flights</b>, confirmed on a second fresh 1,000. The last project reached it with PPO (98.8% / 98.4%);
+    two projects ago NEAT stalled at ~85%. This time NEAT starts clean (random genomes, no copied pilot), with a curriculum,
+    a network big enough, a fast C++ simulator for training and a fairer boulder layout (v3) that is passable by construction.</p>
+  <p class="countdown" id="countdown"></p>
+  <p class="muted" id="updated"></p>
+</header>
+<section class="cards" id="cards"></section>
+<section>
+  <h2>Goal table</h2>
+  <p class="muted">Every agent measured on episodes it never saw. The 95% interval is a Wilson interval.</p>
+  <div class="tablewrap"><table class="t" id="goaltable"></table></div>
+</section>
+<section>
+  <h2>Progress</h2>
+  <p class="muted">The current run, per generation. Orange dots: the generation's champion on 200 fresh real-task flights.
+    Blue line: the champion's own training flights (the stage's world, so early on easier than the real task). Dashed: the 98% goal.</p>
+  <div class="chartbox"><div class="h"><canvas id="chart"></canvas></div></div>
+  <p class="muted small" id="chartnote"></p>
+</section>
+<section>
+  <h2>Log <span class="muted small">newest first · replays play once, click to watch again</span></h2>
+  <p class="muted small">How to read the replays: the <b style="color:#5aaaff">blue arrow</b> at the top is the true wind right now
+    (hidden from the pilot), the <b style="color:#ffa03c">orange arrow</b> is the pilot's own estimate (input 16, computed only from what it
+    has seen). The faint dust streaks drift with the true wind.</p>
+  <div id="log"></div>
+</section>
+</main>
+<footer>Updated automatically every 15 minutes. Numbers are measured, not estimated; "fresh" means seeds never used in training or selection. Checks and the goal test always run in the reference Python simulator.</footer>
+<script src="site.js?v=7911142a"></script>
+<script src="common.js?v=448bd7f6"></script>
+<script src="project.js?v=9956469d"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="app.js?v=fb3b558a"></script>
+</body>
+</html>

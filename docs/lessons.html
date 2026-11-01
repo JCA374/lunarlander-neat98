@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lander NEAT 98: Lessons</title>
+<link rel="stylesheet" href="style.css?v=ea0a339d">
+</head>
+<body>
+<main>
+<h1>Lessons</h1>
+<p class="lede">What this project and earlier ones taught. Newest first.</p>
+<div class="box"><h3>From this project</h3><ul id="new"><li><i>None yet: lessons are added as this project learns them.</i></li></ul></div>
+<div class="box"><h3>From the last two projects</h3><ul>
+<li>Learning signal decides speed: one number per flight needs many flights, shared seeds and fast code.</li>
+<li>Start clean: a copied pilot is a cage for RL and gets wrecked by NEAT's mutations.</li>
+<li>Measure the network size you need before evolving it.</li>
+<li>Hard cases are the curriculum for the last few percent (PPO: 92.7% → ~96%).</li>
+<li>A stage pass on 400 flights is luck after enough tries; choose champions on thousands of fresh flights.</li>
+<li>Check that the world is fair, and prove it with a test: v2 let the boulder sit 1.73 m above the pad, lower than the lander is tall.</li>
+<li>Sensing beats network size: the clean wind sensor (0.97 correlation with the true wind) lifted the hand-written pilot from 75% to 86%.</li>
+<li>Pay for landings, not for the game score (score 182 → 220 while landings fell).</li>
+<li>Profile before rewriting; keep the reference simulator as the judge.</li>
+<li>Determinism, resume and git hygiene bugs cost the most time: test them first. Never <code>git pull --rebase --autostash</code> in a publisher.</li>
+</ul></div>
+</main>
+<script src="site.js?v=7911142a"></script>
+<script src="common.js?v=448bd7f6"></script>
+<script src="project.js?v=9956469d"></script>
+
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lander NEAT 98: How it sees</title>
+<link rel="stylesheet" href="style.css?v=ea0a339d">
+</head>
+<body>
+<main>
+<h1>How it sees</h1>
+<p class="lede">The pilot never sees the wind, the seed or anything hidden inside the simulator. It gets 16 numbers per step:
+the game's 8 standard observations and 8 sensors computed <b>only</b> from what it has observed so far and the actions it took.
+A test (<code>tests/test_core.py</code>) re-computes every input from the observation history and checks the policy flies
+identically when it is given nothing else.</p>
+<div class="tablewrap"><table class="t">
+<tr><th>#</th><th>Input</th><th>What it is</th></tr>
+<tr><td>1–2</td><td>x, y</td><td>position relative to the pad centre (x: 1 = 10 m; y: 1 = 6.7 m)</td></tr>
+<tr><td>3–4</td><td>vx, vy</td><td>velocity</td></tr>
+<tr><td>5–6</td><td>angle, angular velocity</td><td>tilt and how fast it turns</td></tr>
+<tr><td>7–8</td><td>left leg, right leg</td><td>1 when that leg touches the ground</td></tr>
+<tr><td>9</td><td>drift</td><td>old wind sensor: the average change in vx on steps without side engines. Correlates only 0.14 with the true wind, because a tilted main engine pushes sideways too</td></tr>
+<tr><td>10</td><td>|x|</td><td>distance from the pad's centre line</td></tr>
+<tr><td>11–13</td><td>boulder dx, dy, r</td><td>where the boulder is relative to the lander, and its radius (it is visible on screen, so the pilot may know it)</td></tr>
+<tr><td>14</td><td>waypoint dx</td><td>how far from the point beside the boulder it should aim for (then the pad)</td></tr>
+<tr><td>15</td><td>above boulder</td><td>how far above the height it must keep while over the boulder</td></tr>
+<tr><td>16</td><td>clean wind estimate</td><td>the change in vx minus the known push of the action it just took (measured in calm air). Correlates <b>0.97</b> with the true wind. This sensor lifted the hand-written pilot from 75% to 86%</td></tr>
+</table></div>
+<div class="box"><h3>Seeing the wind in the replays</h3>
+<p>Every replay on this site draws the wind. The <b>blue arrow</b> is the true wind on this step, which the pilot never sees.
+The <b>orange arrow</b> is the pilot's clean wind estimate (input 16). The dust streaks drift with the true wind. When the two arrows
+agree, the pilot knows what is pushing it. In a test flight of the bake-off winner they correlated 0.94.</p>
+<img src="wind_gauge.png" alt="a frame with the wind gauge, wind dust, the boulder and the lander" style="max-width:100%;border-radius:8px"></div>
+<div class="box"><h3>Why a sensor can matter more than a bigger network</h3>
+<p>The wind in this game is a smooth random gust (a sum of sine waves with a random phase per flight) plus turbulence. The
+pilot cannot see it, only its effect: a sideways acceleration. But its own side engines and a tilted main engine also cause
+sideways acceleration. If a sensor mixes those up, no network, however big, can tell "the wind pushes me left" from "I just
+fired my right engine". The clean wind estimate subtracts the action's own known push first. That is the kind of missing
+information the old project found mattered most.</p>
+<p>A possible next step, if the failure analysis shows it: a small memory (a few stacked frames or a GRU), so the network
+can build its own estimates from the history.</p></div>
+</main>
+<script src="site.js?v=7911142a"></script>
+<script src="common.js?v=448bd7f6"></script>
+<script src="project.js?v=9956469d"></script>
+</body></html>

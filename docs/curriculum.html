@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lander NEAT 98: Curriculum</title>
+<link rel="stylesheet" href="style.css?v=ea0a339d">
+</head>
+<body>
+<main>
+<h1>Curriculum</h1>
+<p class="lede">Every run's stages: the world, the reward, the check that ends the stage, the cap and the expected outcome, written down <i>before</i> the stage starts.</p>
+<div class="box"><h3>What the last two projects taught about curricula</h3>
+<p><b>From a clean start a curriculum is needed</b>: a random network first has to learn to fly at all. The order that worked:
+calm → steady push → gusts 5 → 10 → 15 → turbulence → boulder (shrunk, then full size), with fading <i>training wheels</i>
+(a torque that pulls the lander upright, fading to zero within the stage) rather than heavy reward shaping.</p>
+<p><b>Easy stages make agents forget</b>: in the NEAT project a 90% agent fell to 52% after calm-air training, because the
+weights that read the wind sensor drift freely when the wind is zero. So the later stages keep 30–50% real-task flights
+(<i>rehearsal</i>) and every check also flies the real task.</p>
+<p><b>Hard cases are the curriculum for the last few percent</b>: re-flying recently failed situations in 30% of training
+flights took PPO from a 92.7% plateau to ~96%. Here they will be <i>training-range</i> seeds the recent champions failed,
+never check or selection seeds.</p>
+<p><b>A stage pass is "move on", not proof</b>: 200 + 200 check flights get passed by luck after enough tries. The last stage
+never ends the run; the champion is chosen on ≥ 1,000 selection flights, the top few re-flown on 2,000 more.</p></div>
+<div class="box"><h3>The plan for this run (written before it starts)</h3>
+<ol>
+<li><b>Calm landing</b>: no wind, no boulder, training wheels 1 → 0.</li>
+<li><b>Wind ramp</b>: steady push → gusts 5 → 10 → 15, then turbulence 0 → 1.5, with rehearsal of calm flights.</li>
+<li><b>Boulder</b>: size 0.4 → 1.0 of full, layout v3, with 30–50% real-task flights.</li>
+<li><b>Real task + hard cases</b>, the long one, no early stop: 30% of flights re-fly failed training seeds; a snapshot every 25 generations.</li>
+</ol>
+<p>Pay: 0.3 × game score + 300 per landing − 200 per timeout − 100 per boulder touch, no centre bonus (the game score alone
+rewards saving fuel, and "points up, landings down" happened before). Each stage's exact settings appear below when it starts.</p></div>
+<div id="runs"></div>
+</main>
+<script src="site.js?v=7911142a"></script>
+<script src="common.js?v=448bd7f6"></script>
+<script src="project.js?v=9956469d"></script>
+<script src="curriculum.js?v=9a10b8a4"></script>
+</body>
+</html>
