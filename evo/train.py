@@ -40,6 +40,7 @@ from lander.neatnet import RandomStartGenome, START, to_json, NeatJsonNet, size
 from lander.seeds import TRAIN, CHECK, SELECT, CLONE
 
 GOAL = 0.95
+TH_MIN, TH_MAX = 0.15, 1.0           # species compatibility threshold range
 _W = {}
 
 
@@ -143,6 +144,10 @@ class Run:
                           'threshold': self.config.species_set_config.compatibility_threshold}
             self._event('run_start', note=self.cur.get('note', ''), args=vars(a))
             self._stage_start()
+        if not TH_MIN <= self.state['threshold'] <= TH_MAX:
+            self._event('override', what='threshold', old=self.state['threshold'], new=0.5,
+                        reason='species threshold had run away; clamped to 0.15-1.0 (journal 2026-11-01)')
+            self.state['threshold'] = 0.5
         self.config.species_set_config.compatibility_threshold = self.state['threshold']
         self.hard = deque(self.state['hard'], maxlen=400)
 
@@ -317,8 +322,10 @@ class Run:
         """Keep about `target_species` species: with 640 start connections the stock threshold gives one species."""
         n, target = len(self.pop.species.species), self.a.target_species
         th = config.species_set_config.compatibility_threshold
-        th *= 0.9 if n < target else 1.1 if n > target else 1.0
-        config.species_set_config.compatibility_threshold = self.state['threshold'] = max(0.02, th)
+        th *= 0.95 if n < target else 1.05 if n > target else 1.0
+        # clamped: the count only responds slowly (old species persist), and unclamped the threshold ran 0.25 -> 35 in
+        # 54 generations of run N1, which would have stopped new species from forming (fixed 2026-11-01)
+        config.species_set_config.compatibility_threshold = self.state['threshold'] = min(TH_MAX, max(TH_MIN, th))
 
     def _next_stage(self, passed):
         st = self.state
