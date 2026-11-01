@@ -149,3 +149,22 @@ def test_neat_start_is_random_not_copied():
     a, b = list(pop.population.values())[:2]
     assert size(a) == (32, 640)
     assert any(abs(a.connections[k].weight - b.connections[k].weight) > 1e-6 for k in a.connections)
+
+
+def test_resume_speciation_uses_the_live_threshold(tmp_path, monkeypatch):
+    """After a resume, the species set must read the same settings object the trainer tunes (run N1 bug: the unpickled
+    species set kept its own copy and speciated with a stale threshold of 46.8 for 140 generations)."""
+    import argparse
+    from evo import train
+    monkeypatch.chdir(tmp_path)
+    os.makedirs('runs')
+    cur = os.path.join(ROOT, 'curricula', 'N1.json')
+    a = argparse.Namespace(run='t', curriculum=cur, config=os.path.join(ROOT, 'neat-config.ini'), seed=1,
+                           target_species=12)
+    r = train.Run(a)
+    r.state['threshold'] = 0.4
+    r.config.species_set_config.compatibility_threshold = 0.4
+    r._save()
+    r2 = train.Run(a)
+    assert r2.pop.species.species_set_config is r2.config.species_set_config
+    assert r2.pop.species.species_set_config.compatibility_threshold == 0.4

@@ -158,3 +158,12 @@ def _encode(frames, out, fps=25, hold=30):
         p.stdin.write(f.convert('RGB').tobytes())
     p.stdin.close()
     p.wait()
+
+
+def extra(data_dir):
+    """The model tab's data: the champion network over time and two recorded flights (lander/netviz.py)."""
+    try:
+        from lander import netviz
+        netviz.build(data_dir)
+    except Exception as ex:                           # the site must still publish if this fails
+        print('network data failed:', ex)

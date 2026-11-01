@@ -40,6 +40,7 @@ from lander.neatnet import RandomStartGenome, START, to_json, NeatJsonNet, size
 from lander.seeds import TRAIN, CHECK, SELECT, CLONE
 
 GOAL = 0.95
+MIN_SPECIES_SIZE, ELITISM = 2, 3       # = neat-config.ini; lowered temporarily when there are very many species
 TH_MIN, TH_MAX = 0.05, 1.0           # species compatibility threshold range (floor 0.15 -> 0.05 at gen 151 of N1: species fell to 3)
 _W = {}
 
@@ -173,6 +174,9 @@ class Run:
     def _restore(self, path):
         blob = pickle.load(open(path, 'rb'))
         self.pop = neat.Population(self.config, (blob['population'], blob['species'], blob['generation']))
+        # the unpickled species set carries its OWN copy of the species settings: share ours, or speciation keeps the
+        # threshold it had when first pickled (run N1 ran on 46.8 from gen 57 to 195 and collapsed to 3 species)
+        self.pop.species.species_set_config = self.config.species_set_config
         # keep innovation numbers and node keys counting on from where they were (a reset once crashed a resumed run)
         self.pop.reproduction.innovation_tracker = blob['innovation_tracker']
         self.config.genome_config.innovation_tracker = blob['innovation_tracker']
@@ -275,6 +279,7 @@ class Run:
         if st['stage_gen'] % a.check_every == 0:
             # the real task, every check whatever the stage (tracked on the chart)
             g = self.check(champ_net, GOAL_WORLD, rw)
+            self._save_champion(champ, 'track')          # the champion's network every check: The model tab's history
             row.update(goal_landed=round(g['landed'], 3), goal_boulder=round(g['boulder'], 3),
                        goal_timeout=round(g['timeout'], 3), goal_offpad=round(g['offpad'], 3))
             if g['landed'] > st['best_goal']:
@@ -322,7 +327,12 @@ class Run:
         """Keep about `target_species` species: with 640 start connections the stock threshold gives one species."""
         n, target = len(self.pop.species.species), self.a.target_species
         th = config.species_set_config.compatibility_threshold
-        th *= 0.95 if n < target else 1.05 if n > target else 1.0
+        th *= 0.95 if n < target else (1.3 if n > 4 * target else 1.05) if n > target else 1.0
+        # neat-python stops with an error when species x min_species_size > population (run N1, gen 197: 105 species);
+        # shrink the per-species minimum (and elitism) for as long as there are that many species
+        rc, pop = config.reproduction_config, config.pop_size
+        rc.min_species_size = max(1, min(MIN_SPECIES_SIZE, pop // max(1, n) - 1))
+        rc.elitism = min(ELITISM, rc.min_species_size)
         # clamped: the count only responds slowly (old species persist), and unclamped the threshold ran 0.25 -> 35 in
         # 54 generations of run N1, which would have stopped new species from forming (fixed 2026-11-01)
         config.species_set_config.compatibility_threshold = self.state['threshold'] = min(TH_MAX, max(TH_MIN, th))

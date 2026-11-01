@@ -5,41 +5,133 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lander NEAT 98: The model</title>
 <link rel="stylesheet" href="style.css?v=ea0a339d">
+<link rel="stylesheet" href="network.css?v=f5ae58f0">
 </head>
 <body>
 <main>
-<h1>The model</h1>
+<h1>The model: an evolved network</h1>
 <p class="lede">The pilot is a small neural network: 16 numbers in (<a href="senses.html">what it sees</a>), 4 numbers out, one per
-action (nothing, left engine, main engine, right engine). Each step it fires the action with the highest number. Nobody
-writes its weights: they are <b>evolved</b> with NEAT.</p>
+action. Each step it fires the action with the highest number. Nobody writes its weights or its wiring: both are
+<b>evolved</b> with NEAT. On this page you can see the real network, watch it think during a flight, follow how it grew,
+and see what each kind of mutation does. Everything here is drawn from the run's saved champions.</p>
+<p class="muted small" id="netstatus">Loading the network…</p>
+
+<h2>1 · The network right now</h2>
+<p>The champion of the newest saved generation. Read it from left to right: the 16 <b>inputs</b> (what it sees), the
+<b>hidden nodes</b> (its own features, each a weighted sum of what feeds it, squashed by tanh into −1…+1), and the
+4 <b>outputs</b> (one score per action). Each line is a connection with a <i>weight</i>: <span class="sw pos"></span> blue
+lines add (positive weight), <span class="sw neg"></span> orange lines subtract (negative weight); the thicker, the stronger.
+A <span class="ring dashed"></span> dashed ring marks a node NEAT added after the start (born later, by a mutation). Hover or tap a
+node to see its connections.</p>
+<div class="netctl">
+  <label>Show the strongest <input type="range" id="keep1" min="5" max="100" value="30" step="5"> <span id="keep1v">30</span>% of connections</label>
+</div>
+<div class="netbox"><svg id="net1" viewBox="0 0 960 560" role="img" aria-label="the champion network"></svg><div class="tip" id="tip1"></div></div>
+<p class="muted small" id="net1cap"></p>
+
+<h2>2 · Watch it think</h2>
+<p>The same network flying a real flight, step by step. Left: the lander. Right: every node's value at this moment:
+<span class="sw pos"></span> blue = positive, <span class="sw neg"></span> orange = negative, pale = near zero. Lines now show
+the signal that actually flows (weight × the value of the node it comes from). The output with the highest score wins, and
+that action is fired (marked ▶). Try pausing when the engines fire and see which hidden nodes are lit.</p>
+<div class="netctl">
+  <span class="seg" id="flightpick"></span>
+  <button id="play">▶ play</button>
+  <input type="range" id="step" min="0" max="0" value="0" style="flex:1;min-width:160px">
+  <span id="stepv" class="muted small"></span>
+</div>
+<p class="muted small" id="flightcap"></p>
+<div class="think">
+  <div class="lander"><canvas id="sky" width="400" height="267" aria-label="the lander"></canvas><div id="act" class="act"></div></div>
+  <div class="why" id="why"></div>
+</div>
+<div class="netbox"><svg id="net2" viewBox="0 0 960 560" role="img" aria-label="the network's node values"></svg><div class="tip" id="tip2"></div></div>
+
+<h2>3 · How it developed</h2>
+<p>Drag through the saved champions, from generation 0 (random) to now. Nodes keep their place, so you can see nodes being
+born <span class="ring dashed"></span> and deleted, and the weights changing. Note: each generation's champion is simply
+the best genome that generation. It can come from a different family line than the one before, so a jump between two
+pictures can be a change of family, not one mutation.</p>
+<div class="netctl"><label>Generation <input type="range" id="snap" min="0" max="0" value="0" style="width:260px"></label> <b id="snapv"></b></div>
+<div class="netbox"><svg id="net3" viewBox="0 0 960 560" role="img" aria-label="the champion network at the chosen generation"></svg><div class="tip" id="tip3"></div></div>
+<p id="diff" class="diff"></p>
+<h3>Size and species over the run</h3>
+<p class="muted small">Three separate charts, one measure each (they have different scales).</p>
+<div class="multi">
+  <div class="mini"><div class="mt">Hidden nodes (champion)</div><div class="h"><canvas id="c_hidden"></canvas></div></div>
+  <div class="mini"><div class="mt">Connections (champion)</div><div class="h"><canvas id="c_conns"></canvas></div></div>
+  <div class="mini"><div class="mt">Species in the population</div><div class="h"><canvas id="c_species"></canvas></div></div>
+</div>
+<h3>Which inputs does it listen to?</h3>
+<p>Each row is an input, each column a saved champion. The darker the cell, the more of the network's first-layer weight
+starts from that input (a rough measure of how much the network listens to it; the share of all input weight). At the
+start it is spread evenly by chance. Watch for inputs that grow as the curriculum makes them useful, like the wind
+estimate once the wind stage starts.</p>
+<div class="netbox heat"><svg id="heat" role="img" aria-label="input usage by generation"></svg><div class="tip" id="tip4"></div></div>
+
+<h2>4 · How evolution changes a network</h2>
+<p>Every child is a copy of its parent (or a mix of two parents) with a few random changes. In this run, per child:</p>
+<div class="muts">
+  <div class="mut"><svg viewBox="0 0 200 110"><circle cx="30" cy="55" r="9" class="n"/><circle cx="170" cy="55" r="9" class="n"/>
+    <path d="M39 55 L161 55" class="lp" stroke-width="2"/><path d="M39 63 L161 63" class="lp" stroke-width="5" opacity=".5"/>
+    <text x="100" y="40" class="tl">0.40 → 0.47</text></svg>
+    <h4>Nudge a weight</h4><p>80% of the weights move a little (random, σ = 0.1). Most change is this kind. 1% are replaced by a fresh random value.</p></div>
+  <div class="mut"><svg viewBox="0 0 200 110"><circle cx="30" cy="30" r="9" class="n"/><circle cx="30" cy="80" r="9" class="n"/><circle cx="170" cy="55" r="9" class="n"/>
+    <path d="M39 30 L161 55" class="lp" stroke-width="2"/><path d="M39 80 L161 55" class="ln new" stroke-width="2"/>
+    <text x="100" y="100" class="tl">new link</text></svg>
+    <h4>Add a connection (5%)</h4><p>Two nodes that were not linked get a new connection with a small random weight.</p></div>
+  <div class="mut"><svg viewBox="0 0 200 110"><circle cx="30" cy="55" r="9" class="n"/><circle cx="170" cy="55" r="9" class="n"/>
+    <circle cx="100" cy="55" r="9" class="n born"/><path d="M39 55 L91 55" class="lp" stroke-width="2"/><path d="M109 55 L161 55" class="lp" stroke-width="2"/>
+    <path d="M39 75 Q100 100 161 75" class="off"/><text x="100" y="30" class="tl">split a link</text></svg>
+    <h4>Add a node (3%)</h4><p>An existing connection A→B is split: a new node C goes in between (A→C weight 1, C→B the old
+    weight), and the old link is switched off. At first the network behaves almost the same; later mutations make C useful.</p></div>
+  <div class="mut"><svg viewBox="0 0 200 110"><circle cx="30" cy="55" r="9" class="n"/><circle cx="170" cy="55" r="9" class="n"/>
+    <circle cx="100" cy="55" r="9" class="n gone"/><path d="M39 55 L91 55" class="off"/><path d="M109 55 L161 55" class="off"/>
+    <text x="100" y="30" class="tl">removed</text></svg>
+    <h4>Delete a node (2%) or a connection (2%)</h4><p>A node and all its links, or one link, disappear. This keeps the network
+    from only ever growing: useless parts can be pruned.</p></div>
+</div>
+<div class="box" id="example"><h3>A real example from this run</h3><p class="muted">Loading…</p></div>
+<div class="box"><h3>Species: protecting new ideas</h3>
+<p>A freshly added node usually makes a network a little worse at first, because its weights are not tuned yet. If it had to
+compete with all the polished networks at once, it would die right away. NEAT therefore sorts genomes into <b>species</b> by how
+different their wiring and weights are, and a genome competes mostly inside its own species. Each species gets a share of the
+children in proportion to how good it is; a species that does not improve for 30 generations is removed. The number of species
+is in the chart above. (I found and fixed a bug here on day 1: after a restart, speciation kept using a stale threshold, and the
+population fell to 3 species; see the Log.)</p></div>
+
+<h2>5 · Background</h2>
 <div class="box"><h3>What NEAT is</h3>
 <p><b>NeuroEvolution of Augmenting Topologies</b> (Stanley &amp; Miikkulainen, 2002). A <i>population</i> of a few hundred networks
 (<i>genomes</i>) each fly the same set of flights and get one number back, their <i>fitness</i>. The better ones become parents:
 their children are copies with small changes (<i>mutations</i>) and mixes of two parents (<i>crossover</i>). Unlike plain
 evolution of weights, NEAT can also <b>grow the network</b>: add a new connection, or split a connection with a new hidden
 node. Every new gene gets an <i>innovation number</i>, so two networks with different wiring can still be lined up for
-crossover. And NEAT protects new ideas with <b>speciation</b>: genomes are grouped by how similar their wiring is, and compete
-mostly within their species, so a freshly grown structure gets a few generations to tune its weights before it has to beat
-the polished old ones.</p></div>
+crossover. And NEAT protects new ideas with <b>speciation</b> (above).</p></div>
+<div class="box"><h3>What it is paid for</h3>
+<p>Each genome's fitness is its average over all its flights of: 0.3 × the game score + 300 for each landing between the flags
+− 200 for a timeout − 100 for touching the boulder. Landing is what pays. (The game score alone rewards saving fuel, and in an
+earlier project the score went up while landings went down.)</p></div>
 <div class="box"><h3>Why NEAT stalled at ~85% two projects ago, and what changes</h3>
 <ul>
 <li><b>One number per flight.</b> PPO learns from every one of the ~300 steps of a flight; NEAT gets only the fitness. Wind makes
-that number noisy, so selection was often luck. Now: many flights per genome (32+), <b>the same seeds for every genome</b>
-in a generation (common random numbers, so differences are the network's, not the weather's), and the top 8–10 re-flown on
-more flights before one is called champion.</li>
-<li><b>Mutations wrecked good networks</b>: children of an 86% parent averaged 70.5%. Now: gentle mutation (most weights nudged a
-little, replacement ≤ 1%), measured: children must not average more than ~3 points below their parent.</li>
+that number noisy, so selection was often luck. Now: 16–32 flights per genome, <b>the same seeds for every genome</b>
+in a generation (common random numbers, so differences are the network's, not the weather's), and the top 10 re-flown on
+40 more flights before one is called champion.</li>
+<li><b>Mutations wrecked good networks</b> in the old run (it started from a copied pilot; children of an 86% parent averaged
+70.5%). A random start needs the opposite: enough mutation to explore. Now 80% of weights are nudged a little each time, and
+replacement is rare (1%). Whether this is too strong for a good network is measured later with a mutation-damage test.</li>
 <li><b>A copied pilot is a cage.</b> The old run started from a clone of the hand-written pilot and never left it. Now: a clean
 start, random genomes.</li>
 <li><b>A minimal start is too small.</b> Plain NEAT starts with inputs wired straight to outputs. Here each genome starts with a
-hidden layer of random tanh nodes, its size taken from a measurement (below).</li>
-<li><b>Too slow to afford it.</b> 300 genomes × 32 flights × ~300 steps ≈ 3 M steps per generation. A C++ simulator for training
-(checked against the Python one) aims for ≥ 10× faster. See <a href="speed.html">Speed</a>.</li>
+hidden layer of 32 random tanh nodes, a size taken from a measurement (below).</li>
+<li><b>Speed.</b> The Python simulator turned out fast enough to start (40,000–50,000 steps per second on 7 workers, 20–90 s per
+generation). A C++ simulator is planned only if speed becomes the bottleneck. See <a href="speed.html">Speed</a>.</li>
 </ul></div>
 <div class="box"><h3>How big must the network be?</h3>
-<p>Before evolving, I measure it: the PPO champion (16→128→128→4, 98.6% on two test blocks) is copied by imitation (DAgger)
-into small networks, 16→8→4, 16→16→4, 16→32→4, 16→16→16→4, and each copy flies 1,000 fresh flights. The smallest that still
-lands well is the size NEAT must be able to reach. These copies are only a yardstick; none is ever used as a starting genome.</p>
+<p>Before evolving, I measured it: the PPO champion of the last project (16→128→128→4) was copied by imitation (DAgger)
+into small networks, and each copy flew 1,000 fresh flights. These copies are only a yardstick; none is ever used as a
+starting genome.</p>
 <div class="tablewrap"><table class="t">
 <tr><th>Network</th><th>Landed, 1,000 fresh flights (v3)</th></tr>
 <tr><td>16→8→4 (copy)</td><td>56.5%</td></tr>
@@ -49,14 +141,12 @@ lands well is the size NEAT must be able to reach. These copies are only a yards
 </table></div>
 <p>Each copy had the same imitation budget (10 rounds × 400 flights), so these are lower bounds on what each size can do,
 but the trend is clear: 8 or 16 hidden nodes are not enough. So every NEAT genome starts with <b>32 random hidden nodes</b>
-(16×32 + 32×4 = 640 connections), and NEAT may add nodes and connections <i>and delete them</i> from there. The test stopped
-before the larger sizes when the plan moved straight to NEAT.</p></div>
-<div class="box"><h3>How the champion's network changed</h3>
-<p>Pictures of real champion genomes (nodes, connections, weights) are added here as the run goes, every 25 generations.</p></div>
+(16×32 + 32×4 = 640 connections), and NEAT may add nodes and connections <i>and delete them</i> from there.</p></div>
 </main>
 <script src="site.js?v=7911142a"></script>
 <script src="common.js?v=448bd7f6"></script>
 <script src="project.js?v=9956469d"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="network.js?v=4b8737f2"></script>
 </body>
 </html>

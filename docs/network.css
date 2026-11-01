@@ -1,0 +1,59 @@
+/* The model tab: network drawings. Diverging pair validated (dataviz validator, CVD-safe) for both themes. */
+:root { --pos: #3b5bdb; --neg: #e8590c; --mid: #c9c7c0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pos: #6a86e8; --neg: #d9701f; --mid: #4a4b52; } }
+:root[data-theme="dark"] { --pos: #6a86e8; --neg: #d9701f; --mid: #4a4b52; }
+
+.netbox { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 6px; }
+.netbox svg { width: 100%; height: auto; display: block; }
+.netbox .tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 6px 9px; font-size: .82rem; max-width: 300px; box-shadow: 0 4px 14px rgba(0,0,0,.12);
+  display: none; z-index: 3; line-height: 1.4; }
+.netctl { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 10px 0; font-size: .92rem; }
+.netctl button, .seg button { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 8px;
+  padding: 5px 12px; font: inherit; cursor: pointer; }
+.seg { display: inline-flex; gap: 0; } .seg button { border-radius: 0; } .seg button:first-child { border-radius: 8px 0 0 8px; }
+.seg button:last-child { border-radius: 0 8px 8px 0; } .seg button.on { background: var(--ink); color: var(--panel); }
+.sw { display: inline-block; width: 18px; height: 4px; border-radius: 2px; vertical-align: middle; }
+.sw.pos { background: var(--pos); } .sw.neg { background: var(--neg); }
+.ring { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ink); vertical-align: middle; }
+.ring.dashed { border-style: dashed; }
+
+svg .lbl { fill: var(--ink); font-size: 13px; }
+svg .lbl.dim { fill: var(--muted); }
+svg .lbl.win { font-weight: 700; }
+svg .node { stroke: var(--ink); stroke-width: 1.2; fill: var(--panel); cursor: pointer; }
+svg .node.born { stroke-dasharray: 3 2; stroke-width: 2; }
+svg .node.win { stroke-width: 3.5; }
+svg .c { fill: none; }
+svg.focus .c { opacity: .06 !important; }
+svg.focus .c.hl { opacity: 1 !important; }
+svg .colhead { fill: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+
+.think { display: grid; grid-template-columns: minmax(240px, 380px) 1fr; gap: 12px; align-items: start; margin-bottom: 12px; }
+.why { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; font-size: .9rem; }
+.why h4 { margin: 0 0 6px; } .why ol { margin: 4px 0 0; padding-left: 20px; } .why .v { font-variant-numeric: tabular-nums; }
+.heat svg { width: auto; max-width: 100%; }
+.think .lander { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 6px; }
+.think canvas { width: 100%; height: auto; display: block; border-radius: 8px; }
+.think .act { text-align: center; font-weight: 650; padding: 6px 0 2px; font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) { .think { grid-template-columns: 1fr; } }
+
+.diff { background: var(--band); border-radius: 10px; padding: 10px 14px; }
+.multi { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.mini { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.mini .mt { font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
+.mini .h { position: relative; height: 160px; }
+.heat svg text { fill: var(--ink); font-size: 12px; }
+.heat svg text.dim { fill: var(--muted); font-size: 11px; }
+
+.muts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.mut { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.mut h4 { margin: 6px 0 4px; } .mut p { margin: 0; font-size: .9rem; }
+.mut svg { width: 100%; height: auto; }
+.mut .n { fill: var(--panel); stroke: var(--ink); stroke-width: 1.5; }
+.mut .n.born { stroke-dasharray: 3 2; stroke-width: 2.2; }
+.mut .n.gone { stroke: var(--muted); stroke-dasharray: 2 3; opacity: .5; }
+.mut .lp { stroke: var(--pos); fill: none; } .mut .ln { stroke: var(--neg); fill: none; }
+.mut .new { stroke-dasharray: 5 3; }
+.mut .off { stroke: var(--muted); stroke-dasharray: 3 4; fill: none; opacity: .6; stroke-width: 1.5; }
+.mut .tl { fill: var(--muted); font-size: 12px; text-anchor: middle; }
