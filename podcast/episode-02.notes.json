@@ -1,0 +1,5 @@
+["Correction to episode 1: species collapsed because a resumed run kept an old threshold of 46.8, not because of the threshold floor",
+ "Threshold chosen by simulation on the saved population: 0.3 gave 79 species, 0.4 gave 13",
+ "Gen 211 diagnosis: 97.5% in its practice world, 67% in full wind, 0% with a boulder in calm air",
+ "Paced ramps from gen 230: 3x speed at >= 90% landed, 1x at >= 70%, 0.5x below",
+ "Stage 2 (wind) passed at gen 301: 87.5% of 200 fresh full-wind flights"]
