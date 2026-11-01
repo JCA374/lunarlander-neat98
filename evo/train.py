@@ -64,16 +64,17 @@ def _init_worker(sim='python'):
 
 
 def fly(args):
-    """Fly one network (a to_json dict) on the given seeds; small per-flight results. ref=True: in the reference
-    env (BRIEF section 6: checks and selection never fly a fast env), else in lander/fastenv.py (the same numbers)
-    or, with --sim cpp, in C++ (lander/cppenv.py, tested in results/cpp_equivalence.json)."""
-    net, seeds, world, *ref = args
+    """Fly one network (a to_json dict) on the given seeds; small per-flight results. mode True: the reference env
+    (checks and the champion's selection flights, BRIEF section 6); 'exact': lander/fastenv.py, the reference's own
+    numbers step for step (tests/test_core.py), for the per-generation re-flights of the top genomes; otherwise
+    training flights: fastenv, or with --sim cpp the C++ env (lander/cppenv.py, results/cpp_equivalence.json)."""
+    net, seeds, world, *mode = args
     pol = NeatJsonNet(net)
-    ref = bool(ref and ref[0])
-    if not ref and _W.get('sim') == 'cpp':
+    mode = mode[0] if mode else None
+    if mode is None and _W.get('sim') == 'cpp':
         rs = _W['cpp'].fly(pol, seeds, world)
     else:
-        run = reference.run_episode if ref else run_episode
+        run = reference.run_episode if mode is True else run_episode
         rs = [run(pol, s, world, env=_W['env']) for s in seeds]
     out = []
     for s, r in zip(seeds, rs):
@@ -272,7 +273,7 @@ class Run:
         # re-fly the top genomes on fresh selection seeds (same world); champion = best average over all its flights
         top = sorted(zip(genomes, res), key=lambda z: -z[0][1].fitness)[:a.reeval_top]
         sel = [SELECT + st['gen'] * 1000 + i for i in range(a.reeval_flights)]
-        more = fly_many(self.pool, [(nets[gid], sel, world, True) for (gid, _), _ in top], chunk=10)
+        more = fly_many(self.pool, [(nets[gid], sel, world, 'exact') for (gid, _), _ in top], chunk=10)
         steps += sum(r['steps'] for rs in more for r in rs)
         scored = [(summary(rs + m, rw), g, rs) for ((_, g), rs), m in zip(top, more)]
         champ_s, champ, champ_train = max(scored, key=lambda z: z[0]['fitness'])
@@ -477,7 +478,7 @@ def main():
     ap.add_argument('--curriculum', required=True)
     ap.add_argument('--run', required=True)
     ap.add_argument('--config', default='neat-config.ini')
-    ap.add_argument('--workers', type=int, default=7)
+    ap.add_argument('--workers', type=int, default=8)          # measured 2026-11-01: 8 beats 7 by ~2%, 4 -> 8 only +17% (4 cores)
     ap.add_argument('--flights', type=int, default=24)
     ap.add_argument('--reeval-top', type=int, default=10)
     ap.add_argument('--reeval-flights', type=int, default=40)

@@ -49,6 +49,15 @@ an hour.</b></p>
 for this env. gymnasium asks Box2D for 180 velocity and 60 position iterations per step, and box2d-py's own
 <code>world.Step</code> measured about a third of the whole Python step. C++ removes the Python around it, not the solver,
 and fewer iterations would change the physics.</p>
+<p><b>Workers (measured 2026-11-01, from the gen-326 checkpoint, 7 identical generations each, C++ training):</b></p>
+<div class="tablewrap"><table class="t">
+<tr><th>Workers</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th></tr>
+<tr><td>Wall s / gen (mean of gens 2–7)</td><td>22.8</td><td>21.4</td><td>20.2</td><td>19.4, 19.2, 19.3</td><td>18.9, 18.6, 19.0</td></tr>
+</table></div>
+<p>8 workers beat 7 in all three alternating pairs, by ~2%. From 4 to 8 workers it is only ~17% faster: the laptop has 4
+physical cores and the second thread of each core adds little. N1 runs with 8 workers from gen 327. The top 10's 40
+re-flights per generation now fly <code>lander/fastenv.py</code>, the reference env's numbers step for step; the checks and
+the champion's selection flights still fly the reference env itself.</p>
 <p><b>What changed.</b> (1) <code>NeatJsonNet</code> picks its action with a numba kernel: 5 µs instead of 46 µs per call on a
 551-connection network, the same action. (2) <code>lander/fastenv.py</code>: the frozen flight minus gymnasium's wrapper layers,
 numpy scalar maths and per-step RNG calls; step-by-step identical inputs, actions and results (test in
