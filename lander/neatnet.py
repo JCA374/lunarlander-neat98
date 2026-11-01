@@ -55,6 +55,106 @@ class RandomStartGenome(neat.DefaultGenome):
                 c.weight, c.enabled = float(np.random.normal(0, 1 / np.sqrt(H))), True
                 self.connections[(k, o)] = c
 
+    # Speed (2026-11-01): between generations the trainer's main process spent ~6 s while all workers waited, mostly
+    # in these two neat-python 2.0 methods. Same logic, same random draws in the same order, same float sums, so the
+    # same children and species; only faster (tests/test_core.py compares them with neat-python's own methods).
+
+    def configure_crossover(self, genome1, genome2, config):
+        """neat.DefaultGenome.configure_crossover, with the feed-forward cycle check done on a successor map built as
+        the child grows (neat-python rescans every connection so far for every gene: O(n^2) per child)."""
+        if genome1.fitness > genome2.fitness:
+            parent1, parent2 = genome1, genome2
+        else:
+            parent1, parent2 = genome2, genome1
+        parent1_innovations = {cg.innovation: cg for cg in parent1.connections.values()}
+        parent2_innovations = {cg.innovation: cg for cg in parent2.connections.values()}
+        all_innovations = set(parent1_innovations.keys()) | set(parent2_innovations.keys())
+        ff = config.feed_forward
+        succ = {}
+        for a, b in self.connections:
+            succ.setdefault(a, set()).add(b)
+
+        def cycle(key):                      # graphs.creates_cycle: is key's input reachable from its output?
+            i, o = key
+            if i == o:
+                return True
+            seen, todo = {o}, [o]
+            while todo:
+                for b in succ.get(todo.pop(), ()):
+                    if b == i:
+                        return True
+                    if b not in seen:
+                        seen.add(b)
+                        todo.append(b)
+            return False
+
+        for innovation_num in all_innovations:
+            cg1 = parent1_innovations.get(innovation_num)
+            cg2 = parent2_innovations.get(innovation_num)
+            if cg1 is not None and cg2 is not None:
+                if cg1.key != cg2.key:
+                    import warnings
+                    warnings.warn(f"Innovation number collision: innovation {innovation_num} assigned to both "
+                                  f"{cg1.key} and {cg2.key}. Treating as disjoint genes.", RuntimeWarning)
+                    new_gene = cg1.copy()
+                else:
+                    new_gene = cg1.crossover(cg2)
+            elif cg1 is not None:
+                new_gene = cg1.copy()
+            else:
+                continue
+            if ff and cycle(new_gene.key):
+                continue
+            self.connections[new_gene.key] = new_gene
+            succ.setdefault(new_gene.key[0], set()).add(new_gene.key[1])
+        parent2_set = parent2.nodes
+        for key, ng1 in parent1.nodes.items():
+            ng2 = parent2_set.get(key)
+            assert key not in self.nodes
+            self.nodes[key] = ng1.copy() if ng2 is None else ng1.crossover(ng2)
+
+    def distance(self, other, config):
+        """neat.DefaultGenome.distance with the gene distances inlined (same terms, same order of summation)."""
+        cw, cd = config.compatibility_weight_coefficient, config.compatibility_disjoint_coefficient
+        node_distance = 0.0
+        sn, on = self.nodes, other.nodes
+        if sn or on:
+            disjoint_nodes = 0
+            for k2 in on:
+                if k2 not in sn:
+                    disjoint_nodes += 1
+            for k1, n1 in sn.items():
+                n2 = on.get(k1)
+                if n2 is None:
+                    disjoint_nodes += 1
+                else:
+                    d = abs(n1.bias - n2.bias) + abs(n1.response - n2.response)
+                    d += abs(n1.time_constant - n2.time_constant)
+                    if n1.activation != n2.activation:
+                        d += 1.0
+                    if n1.aggregation != n2.aggregation:
+                        d += 1.0
+                    node_distance += d * cw
+            node_distance = (node_distance + (cd * disjoint_nodes)) / max(len(sn), len(on))
+        connection_distance = 0.0
+        sc, oc = self.connections, other.connections
+        if sc or oc:
+            disjoint_connections = 0
+            for k2 in oc:
+                if k2 not in sc:
+                    disjoint_connections += 1
+            for k1, c1 in sc.items():
+                c2 = oc.get(k1)
+                if c2 is None:
+                    disjoint_connections += 1
+                else:
+                    d = abs(c1.weight - c2.weight)
+                    if c1.enabled != c2.enabled:
+                        d += 1.0
+                    connection_distance += d * cw
+            connection_distance = (connection_distance + (cd * disjoint_connections)) / max(len(sc), len(oc))
+        return node_distance + connection_distance
+
 
 def _innov(config, a, b):
     """neat-python 2.0 gives every connection gene a historical innovation number; the start layer's genes are the

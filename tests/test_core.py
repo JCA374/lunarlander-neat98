@@ -229,3 +229,29 @@ def test_cpp_flight_is_the_fresh_reference_flight(world):
         net = NeatJsonNet(to_json(g, cfg))
         seeds = [11, 222, 3333, 44444]
         assert cppenv.fly(net, seeds, world) == [run_episode(net, s, world) for s in seeds]
+
+
+def test_fast_crossover_and_distance_match_neat_python():
+    """RandomStartGenome's faster configure_crossover and distance give neat-python's children and distances exactly."""
+    import random
+    import neat
+    from lander.neatnet import RandomStartGenome
+    cfg = _neat_config()
+    gc = cfg.genome_config
+    gs = list(neat.Population(cfg).population.values())[:8]
+    for i, g in enumerate(gs):
+        for _ in range(10 * i):
+            g.mutate(gc)
+        g.fitness = float(i)
+    snap = lambda g: (sorted((k, c.weight, c.enabled) for k, c in g.connections.items()),
+                      sorted((k, n.bias, n.response) for k, n in g.nodes.items()))
+    for a in gs:
+        for b in gs:
+            assert RandomStartGenome.distance(a, b, gc) == neat.DefaultGenome.distance(a, b, gc)
+            kids = []
+            for f in (neat.DefaultGenome.configure_crossover, RandomStartGenome.configure_crossover):
+                random.seed(3)
+                k = RandomStartGenome(0)
+                f(k, a, b, gc)
+                kids.append(snap(k))
+            assert kids[0] == kids[1]
