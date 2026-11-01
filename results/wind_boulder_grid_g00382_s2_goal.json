@@ -1,0 +1,167 @@
+{
+ "champion": "runs/N1/champions/g00382_s2_goal.json",
+ "n": 400,
+ "seeds": "ANALYSIS+800000..+399",
+ "cells": [
+  {
+   "wind": 0,
+   "turbulence": 0.0,
+   "boulder_size": null,
+   "landed": 0.8575,
+   "boulder": 0.0,
+   "crashed": 0.0,
+   "offpad": 0.0,
+   "timeout": 0.1425
+  },
+  {
+   "wind": 0,
+   "turbulence": 0.0,
+   "boulder_size": 0.4,
+   "landed": 0.8025,
+   "boulder": 0.035,
+   "crashed": 0.0025,
+   "offpad": 0.0,
+   "timeout": 0.16
+  },
+  {
+   "wind": 0,
+   "turbulence": 0.0,
+   "boulder_size": 0.7,
+   "landed": 0.9125,
+   "boulder": 0.065,
+   "crashed": 0.0,
+   "offpad": 0.0,
+   "timeout": 0.0225
+  },
+  {
+   "wind": 0,
+   "turbulence": 0.0,
+   "boulder_size": 1.0,
+   "landed": 0.9025,
+   "boulder": 0.08,
+   "crashed": 0.0,
+   "offpad": 0.005,
+   "timeout": 0.0125
+  },
+  {
+   "wind": 5,
+   "turbulence": 0.5,
+   "boulder_size": null,
+   "landed": 0.96,
+   "boulder": 0.0,
+   "crashed": 0.005,
+   "offpad": 0.005,
+   "timeout": 0.03
+  },
+  {
+   "wind": 5,
+   "turbulence": 0.5,
+   "boulder_size": 0.4,
+   "landed": 0.8075,
+   "boulder": 0.035,
+   "crashed": 0.0,
+   "offpad": 0.0,
+   "timeout": 0.1575
+  },
+  {
+   "wind": 5,
+   "turbulence": 0.5,
+   "boulder_size": 0.7,
+   "landed": 0.895,
+   "boulder": 0.065,
+   "crashed": 0.0075,
+   "offpad": 0.0,
+   "timeout": 0.0325
+  },
+  {
+   "wind": 5,
+   "turbulence": 0.5,
+   "boulder_size": 1.0,
+   "landed": 0.855,
+   "boulder": 0.0975,
+   "crashed": 0.0025,
+   "offpad": 0.0025,
+   "timeout": 0.0425
+  },
+  {
+   "wind": 10,
+   "turbulence": 1.0,
+   "boulder_size": null,
+   "landed": 0.935,
+   "boulder": 0.0,
+   "crashed": 0.0325,
+   "offpad": 0.0125,
+   "timeout": 0.02
+  },
+  {
+   "wind": 10,
+   "turbulence": 1.0,
+   "boulder_size": 0.4,
+   "landed": 0.79,
+   "boulder": 0.0575,
+   "crashed": 0.0225,
+   "offpad": 0.01,
+   "timeout": 0.12
+  },
+  {
+   "wind": 10,
+   "turbulence": 1.0,
+   "boulder_size": 0.7,
+   "landed": 0.81,
+   "boulder": 0.0875,
+   "crashed": 0.025,
+   "offpad": 0.01,
+   "timeout": 0.0675
+  },
+  {
+   "wind": 10,
+   "turbulence": 1.0,
+   "boulder_size": 1.0,
+   "landed": 0.75,
+   "boulder": 0.1275,
+   "crashed": 0.0375,
+   "offpad": 0.04,
+   "timeout": 0.045
+  },
+  {
+   "wind": 15,
+   "turbulence": 1.5,
+   "boulder_size": null,
+   "landed": 0.735,
+   "boulder": 0.0,
+   "crashed": 0.1525,
+   "offpad": 0.075,
+   "timeout": 0.0375
+  },
+  {
+   "wind": 15,
+   "turbulence": 1.5,
+   "boulder_size": 0.4,
+   "landed": 0.62,
+   "boulder": 0.1175,
+   "crashed": 0.1525,
+   "offpad": 0.055,
+   "timeout": 0.055
+  },
+  {
+   "wind": 15,
+   "turbulence": 1.5,
+   "boulder_size": 0.7,
+   "landed": 0.6075,
+   "boulder": 0.1175,
+   "crashed": 0.1375,
+   "offpad": 0.08,
+   "timeout": 0.0575
+  },
+  {
+   "wind": 15,
+   "turbulence": 1.5,
+   "boulder_size": 1.0,
+   "landed": 0.5275,
+   "boulder": 0.1775,
+   "crashed": 0.1625,
+   "offpad": 0.0875,
+   "timeout": 0.045
+  }
+ ]
+}
