@@ -34,12 +34,18 @@ interval. All checks, the selection and the goal test run in the Python referenc
 <p>End to end, from <code>runs/N1/stats.csv</code> (median over the generations in each phase; every generation is 300
 genomes × 24 flights plus the top 10 re-flown on 40 selection flights):</p>
 <div class="tablewrap"><table class="t">
-<tr><th>Training flights in</th><th>Generations</th><th>Seconds / generation</th><th>Steps / s</th><th>Generations / hour</th></tr>
-<tr><td>Reference Python env, numpy network</td><td>236–251</td><td>95.0</td><td>32,500</td><td>38</td></tr>
-<tr><td>Fast Python path + numba network (same numbers bit for bit)</td><td>252–266</td><td>47.9</td><td>67,600</td><td>75</td></tr>
-<tr><td>C++ simulator + C++ network</td><td>267–</td><td>18.4</td><td>166,600</td><td>~195</td></tr>
+<tr><th>Training flights in</th><th>Generations</th><th>Flying s / gen</th><th>Wall s / gen</th><th>Steps / s (flying)</th></tr>
+<tr><td>Reference Python env, numpy network</td><td>236–251</td><td>95.0</td><td>~101</td><td>32,500</td></tr>
+<tr><td>Fast Python path + numba network (same numbers bit for bit)</td><td>252–266</td><td>47.9</td><td>~54</td><td>67,600</td></tr>
+<tr><td>C++ simulator + C++ network</td><td>267–312</td><td>18.4</td><td>26.8</td><td>166,600</td></tr>
+<tr><td>+ faster NEAT crossover and distance (same children and species)</td><td>313–</td><td>17.0</td><td>~19</td><td>160,000</td></tr>
 </table></div>
-<p><b>5.2× faster end to end</b>, short of the 10× target. The profile says why: the old figure of 1.5 µs for Box2D was wrong
+<p>"Flying" is <code>evaluate()</code> (the <code>secs</code> column of stats.csv); "wall" also counts NEAT's reproduction and
+speciation in the main process, while the workers wait: ~6 s per generation in neat-python 2.0, ~1.5 s after overriding
+its crossover cycle check (it rescanned every connection for every inherited gene) and its genome distance. Wall time for the
+first two phases is estimated with that same ~6 s. <b>Wall clock: ~101 → ~19 s per generation, about 5.3×, ~190 generations
+an hour.</b></p>
+<p>Short of the 10× target. The profile says why: the old figure of 1.5 µs for Box2D was wrong
 for this env. gymnasium asks Box2D for 180 velocity and 60 position iterations per step, and box2d-py's own
 <code>world.Step</code> measured about a third of the whole Python step. C++ removes the Python around it, not the solver,
 and fewer iterations would change the physics.</p>
