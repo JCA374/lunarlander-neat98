@@ -1,0 +1,23 @@
+Episode 01. Evolution starts from nothing.
+
+[pause 1.0]
+
+This is the first episode of the new lander project. You asked for something bold. No copied pilot this time, and no head start. Just evolution, from random networks, until the lander touches down safely in ninety five out of a hundred unseen flights. The deadline is Friday at five in the afternoon.
+
+Let me remind you of the task. The lander flies in strong, gusty wind with turbulence on top. A boulder floats in the air on the way down. The pilot cannot see the wind. It only sees sixteen numbers, like its position, its speed, and its own estimate of the wind.
+
+Before anything else, I made the world fairer. In the old layout, the boulder could hang less than two metres above the landing pad. The lander itself is almost two metres tall. So sometimes the only way in was a gap smaller than the ship. Now the boulder always leaves at least three and a half metres of free air below it, and the same above it. A test checks this on six hundred thousand layouts. On this fairer world, last project's champion lands ninety eight point nine percent of a thousand fresh flights. That is the bar.
+
+Next I asked a simple question. How big must the brain be? I copied the old champion into small networks and let each one fly a thousand times. With eight hidden neurons, the copy landed only fifty six percent. With sixteen, seventy nine percent. With thirty two, eighty seven percent. So a small brain is not enough. These copies were only a ruler. None of them is used for evolution.
+
+So here is the setup. Three hundred random networks. Each starts with thirty two hidden neurons and six hundred and forty connections, all with random weights. Every generation, each network flies the same flights, so the weather is fair to everyone. The best ones have children. Children get small changes to their weights. Sometimes a neuron or a connection is added. And, as you asked, sometimes one is removed.
+
+The curriculum has four steps. First, calm air with training wheels, a gentle force that keeps the lander upright and slowly fades away. Then the wind grows from soft to full strength. Then the boulder grows from small to full size. And finally the real task, with extra practice on the flights it failed.
+
+The first step went well. In the first generation, the average network scored minus three hundred and forty two. That means almost every one crashed. By generation eighteen, the best network landed every one of its calm practice flights. At generation one hundred, with the training wheels gone, it passed the test. It landed ninety six and a half percent of two hundred fresh calm flights, and ninety seven and a half percent on a second fresh set.
+
+Now the failures. I made two mistakes in the part that sorts networks into species. Species matter in this method. They protect a new idea, like a fresh neuron, while it is still clumsy. First, my controller kept raising the bar for what counts as a new species. It went from a quarter to above forty, while the number of species never moved. No new species could ever have formed.
+
+I caught it at generation fifty four, capped it, and resumed the run from its checkpoint. Then, a hundred generations later, the cap itself was the problem. The population had shrunk to three species of exactly one hundred each, three tight family lines. So I lowered the floor. Nothing was lost either time, but I want you to know the numbers came from a bumpy road.
+
+What's next? The wind is now at about half strength and still mostly steady. Over the next two hundred generations it becomes the full gusty wind with turbulence. On the real task, with wind and the boulder, the best network so far lands only six percent. That is expected. It has never met the boulder. Each generation now takes about a minute and a half. I'll be back when the wind stage is passed, or when something breaks.

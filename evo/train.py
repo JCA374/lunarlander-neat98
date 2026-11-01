@@ -5,8 +5,11 @@
 Every generation: all genomes fly the same K training seeds (common random numbers: differences are the network's,
 not the weather's). The top `reeval_top` genomes re-fly `reeval_flights` selection seeds; the best average is the
 generation champion. Every `check_every` generations the champion flies 200 fresh check seeds of the REAL task (no
-help) whatever the stage, and, once the stage's ramps are done, 200 in the stage's final world (pass check, confirmed
-on another fresh 200). The last stage never ends by passing; snapshots every 25 generations.
+help) whatever the stage, and 200 in the stage's final world (pass check, confirmed on another fresh 200; passing ends
+the stage at once, even mid-ramp). The last stage never ends by passing; snapshots every 25 generations.
+
+Ramps are paced (from N1 gen 220): the ramp position moves 3 generations per generation while the champion lands >= 90%
+of its own flights in the current world, 1 at >= 70%, 0.5 below (Run.pace). A stage still ends at its cap.
 
 Goal (the user's, 2026-11-01): stop when the champion lands >= 95%. A real-task check >= 95% on 200 triggers 1,000
 selection flights; if those land >= 95% the run saves `goal_candidate` and stops. The test blocks (2e9+) are flown
@@ -23,11 +26,13 @@ for _v in ('OPENBLAS_NUM_THREADS', 'OMP_NUM_THREADS', 'MKL_NUM_THREADS'):
     os.environ.setdefault(_v, '1')     # one BLAS thread per worker: 8 workers x 8 threads once gave a load of 34
 import argparse
 import csv
+import glob
 import json
 import pickle
 import random
 import signal
 import time
+from datetime import datetime, timedelta
 from collections import deque
 from itertools import count
 from multiprocessing import Pool
@@ -40,6 +45,7 @@ from lander.neatnet import RandomStartGenome, START, to_json, NeatJsonNet, size
 from lander.seeds import TRAIN, CHECK, SELECT, CLONE
 
 GOAL = 0.95
+SITE_DEADLINE = json.load(open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'site.json')))['deadline']
 MIN_SPECIES_SIZE, ELITISM = 2, 3       # = neat-config.ini; lowered temporarily when there are very many species
 TH_MIN, TH_MAX = 0.05, 1.0           # species compatibility threshold range (floor 0.15 -> 0.05 at gen 151 of N1: species fell to 3)
 _W = {}
@@ -233,7 +239,8 @@ class Run:
         st, stg, a = self.state, self.stage(), self.a
         t0 = time.time()
         ramp_len = max(1, int(stg.get('ramp_frac', 0.6) * stg['cap']))
-        t = st['stage_gen'] / ramp_len if (stg.get('ramp') or stg.get('support')) else 1.0
+        ramped = bool(stg.get('ramp') or stg.get('support'))
+        t = st.setdefault('ramp_pos', float(st['stage_gen'])) / ramp_len if ramped else 1.0
         world = stage_world(stg, t)
         rw = stg.get('reward', {})
         K = st.get('flights_override') or stg.get('flights', a.flights)
@@ -255,6 +262,10 @@ class Run:
         scored = [(summary(rs + m, rw), g, rs) for ((_, g), rs), m in zip(top, more)]
         champ_s, champ, champ_train = max(scored, key=lambda z: z[0]['fitness'])
         champ_net = nets[champ.key]
+        if ramped:
+            ci = [g for _, g, _ in scored].index(champ)
+            st['ramp_pos'] += self.pace(champ_train + more[ci], world)
+            t_next = min(1.0, st['ramp_pos'] / ramp_len)
         # hard cases: the champion's failed TRAINING seeds, flown in the real task's sense (only when the world is real)
         if world.boulder and world.wind >= 15 and world.support == 0:
             for r in champ_train:
@@ -267,6 +278,7 @@ class Run:
                'wind': round(world.wind, 2), 'turbulence': round(world.turbulence, 2), 'steady': round(world.steady, 2),
                'boulder': int(world.boulder), 'boulder_size': round(world.boulder_size, 2),
                'support': round(world.support, 3), 'goal_mix': world.goal_mix,
+               'boulder_mix': world.boulder_mix, 'ramp_t': round(t_next if ramped else 1.0, 3),
                'best': round(max(fits), 1), 'mean': round(float(np.mean(fits)), 1),
                'champ_fit': round(champ_s['fitness'], 1), 'champ_landed': round(champ_s['landed'], 3),
                'champ_score': round(champ_s['score'], 1), 'champ_boulder': round(champ_s['boulder'], 3),
@@ -276,6 +288,12 @@ class Run:
                'threshold': round(config.species_set_config.compatibility_threshold, 3),
                'check_landed': '', 'goal_landed': '', 'goal_boulder': '', 'goal_timeout': '', 'goal_offpad': ''}
         st['steps'] += steps
+        # this generation's champion and the world it flew in, for the local dashboard's "watch it now" replays
+        d = dict(to_json(champ, config), gen=st['gen'], stage=stg['name'], genome_key=champ.key, world=world.as_dict(),
+                 champ={k: champ_s[k] for k in ('landed', 'crashed', 'boulder', 'timeout', 'offpad', 'n')})
+        tmp = os.path.join(self.dir, 'champion_now.json.tmp')
+        json.dump(d, open(tmp, 'w'))
+        os.replace(tmp, os.path.join(self.dir, 'champion_now.json'))
         if st['stage_gen'] % a.check_every == 0:
             # the real task, every check whatever the stage (tracked on the chart)
             g = self.check(champ_net, GOAL_WORLD, rw)
@@ -288,8 +306,10 @@ class Run:
                 self._event('goal_best', stage=stg['name'], check=g, champion=path)
             if g['landed'] >= GOAL:
                 self._goal_candidate(champ, g)
-            # the stage's pass check, once the ramps are done
-            if t >= 1 and not stg.get('final'):
+            # the stage's FINAL world (ramps at their end, no help), every check from the stage's start. Passing it
+            # (and the confirmation) ends the stage at once, even mid-ramp: the rest of the ramp would be easier
+            # than what it just passed (break point added at N1 gen 220)
+            if not stg.get('final'):
                 fw = check_world(stg)
                 chk = self.check(champ_net, fw, rw)
                 row['check_landed'] = round(chk['landed'], 3)
@@ -306,6 +326,18 @@ class Run:
         row.update(steps=st['steps'], secs=round(dt, 1), steps_per_s=int(steps / dt))
         self._log(row)
         self._tune_species(config)
+
+    @staticmethod
+    def pace(rs, world):
+        """How many ramp generations to advance (run N1 from gen 220; before, always 1). The ramp used to move on a fixed
+        clock while the champion already landed 97-100% of its flights (N1, gens 105-219): wasted generations. Now it
+        moves 3x when the champion lands >= 90% of its flights in the current world, 1x at >= 70%, and at half speed
+        below that (never stops: the stage cap still applies). Extra boulder flights (boulder_mix) do not count: they
+        practise a later skill, not the one being ramped."""
+        own = [r for r in rs if not (world.boulder_mix and not world.boulder and
+                                     np.random.default_rng([int(r['seed']), 17]).random() < world.boulder_mix)]
+        landed = sum(r['landed'] for r in own) / max(1, len(own))
+        return 3.0 if landed >= 0.9 else 1.0 if landed >= 0.7 else 0.5
 
     def _goal_candidate(self, champ, g):
         """200 flights >= 95%: re-fly 1,000 fresh selection flights before believing it (the winner's curse)."""
@@ -346,12 +378,20 @@ class Run:
             return
         st['stage'] += 1
         st['stage_gen'] = -1                           # incremented to 0 after this generation
+        st['ramp_pos'] = 0.0
         st.pop('flights_override', None)
         self._stage_start()
 
     def _log(self, row):
         path = os.path.join(self.dir, 'stats.csv')
         new = not os.path.exists(path)
+        if not new:
+            with open(path, newline='') as f:
+                old = list(csv.DictReader(f))
+            if old and list(old[0]) != list(row):          # a new column: rewrite the file with the new header
+                with open(path, 'w', newline='') as f:
+                    w = csv.DictWriter(f, fieldnames=list(row), restval='', extrasaction='ignore')
+                    w.writeheader(); w.writerows(old)
         with open(path, 'a', newline='') as f:
             w = csv.DictWriter(f, fieldnames=list(row))
             if new:
@@ -372,9 +412,37 @@ class Run:
             self._next_stage(passed=False)
             self.state['stage_gen'] += 1
 
+    def _final_pick(self):
+        """The deadline came first: pick the champion to test. Every check's best is flattered by luck (the winner's
+        curse), so the 5 champions with the best real-task checks, plus the newest, each re-fly 1,000 fresh selection
+        flights; the best of those goes to the test blocks (supervise.sh flies them)."""
+        ev = [json.loads(l) for l in open(os.path.join(self.dir, 'events.jsonl')) if l.strip()]
+        best = sorted((e for e in ev if e['kind'] == 'goal_best'), key=lambda e: -e['check']['landed'])[:5]
+        paths = [e['champion'] for e in best]
+        tracks = sorted(glob.glob(os.path.join(self.dir, 'champions', '*_track.json')))
+        paths += [p for p in tracks[-1:] if p not in paths]
+        scored = []
+        if not paths:
+            self._event('final_pick', champion=None, note='deadline reached before any real-task check')
+            self.state['done'] = True
+            return
+        for p in paths:
+            sel = self.select_flights(json.load(open(p)), 1000)
+            scored.append((sel['landed'], p, sel))
+            print(f'final pick: {p} {sel["landed"]:.3f}', flush=True)
+        landed, path, sel = max(scored)
+        self._event('final_pick', champion=path, selection=sel,
+                    others=[{'champion': p, 'landed': l} for l, p, _ in scored],
+                    note='deadline reached; the best of these on 1,000 fresh selection flights goes to the test blocks')
+        self.state['done'] = True
+
     def train(self):
         with Pool(self.a.workers, initializer=_init_worker) as self.pool:
             while not self.state['done'] and not self.stop:
+                if time.time() >= self.a.stop_at:
+                    self._event('deadline', note='stopped for the deadline (test blocks before %s)' % SITE_DEADLINE)
+                    self._final_pick()
+                    break
                 self.pop.run(self.evaluate, 1)
                 st = self.state
                 st['gen'] += 1
@@ -386,7 +454,7 @@ class Run:
                 if st['gen'] % 5 == 0 or self.stop or st['done']:
                     self._save()
         self._save()
-        print('goal reached' if self.state['done'] else 'stopped', flush=True)
+        print('finished (goal or deadline)' if self.state['done'] else 'stopped', flush=True)
 
 
 def main():
@@ -403,7 +471,10 @@ def main():
     ap.add_argument('--target-species', type=int, default=12)
     ap.add_argument('--seed', type=int, default=1)
     ap.add_argument('--max-gens', type=int, default=0, help='stop after this many generations (tests)')
+    ap.add_argument('--stop-at', default='', help='ISO time to stop and pick a champion (default: site.json deadline - 20 min)')
     a = ap.parse_args()
+    a.stop_at = (datetime.fromisoformat(a.stop_at) if a.stop_at
+                 else datetime.fromisoformat(SITE_DEADLINE) - timedelta(minutes=20)).timestamp()
     r = Run(a)
     if a.max_gens:
         r.state['done'] = False

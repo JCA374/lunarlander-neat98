@@ -1,0 +1,4 @@
+== ch01  4:11 audio, checked in 195s: 3 to listen to  (5 dismissed by the second model)
+    0:19  swapped  expected: 'a'                              heard: 'one'
+    1:11  missing  expected: 'point'                          heard: '–'
+  ¶0     pace slow: 1.73 words/s (chapter 2.81)  Episode 01. Evolution starts from nothing.…

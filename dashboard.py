@@ -17,6 +17,7 @@ import json
 import os
 import subprocess
 import sys
+import threading
 import time
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -28,6 +29,7 @@ PORT = 8050
 SITE = json.load(open(os.path.join(ROOT, 'site.json')))
 GOAL = SITE['goal']['target']                # 0.95 since 2026-11-01
 TREND_WINDOW = 50                            # generations the trend sentences look back over
+RENDER_EVERY = 150                           # s: at most one "watch it now" render this often (nice 15, ~1 core)
 
 
 # ------------------------------------------------------------------ data
@@ -89,10 +91,13 @@ def world_now(stage, last):
         parts.append(f"turbulence now {turb:g} of {ramp['turbulence'][1]:g}")
     elif wind and turb:
         parts.append(f'turbulence {turb:g}')
+    if num(last, 'boulder_mix', 0) and not num(last, 'boulder', 0):
+        parts.append(f"{num(last, 'boulder_mix'):.0%} of flights carry a small practice boulder "
+                     f"({num(last, 'boulder_size', 1):.0%} of full size); they do not count for the pace or the pass check")
     if num(last, 'boulder', 0):
         bs = num(last, 'boulder_size', 1)
         parts.append(f"the boulder is growing: now {bs:.0%} of full size" if 'boulder_size' in ramp else 'the boulder (full size)')
-    else:
+    elif not num(last, 'boulder_mix', 0):
         parts.append('no boulder')
     sup = num(last, 'support', 0)
     if 'support' in stage:
@@ -110,6 +115,7 @@ def stage_info(cur, stats, events, check_every=10):
     si = names.index(last['stage']) if last['stage'] in names else 0
     st = cur['stages'][si]
     sg = int(last['stage_gen'])
+    ramp_t = num(last, 'ramp_t')                 # paced ramp (from N1 gen 230); older rows: stage_gen / ramp length
     ramped = bool(st.get('ramp') or st.get('support'))
     ramp_len = max(1, int(st.get('ramp_frac', 0.6) * st['cap'])) if ramped else 0
     passes = {e['stage']: e for e in events if e['kind'] == 'stage_pass'}
@@ -134,15 +140,19 @@ def stage_info(cur, stats, events, check_every=10):
     else:
         need = [f"≥ {pct(p['landed'])} landed" if 'landed' in p else '', f"timeouts ≤ {pct(p['timeout'])}" if 'timeout' in p else '']
         need = ' and '.join(x for x in need if x)
-        when = (f'Pass checks start at generation {ramp_len} of the stage, when the ramp is done'
-                if ramped and sg < ramp_len else 'Pass checks run now, every %d generations' % check_every)
-        rule = (f'{when}. To pass it needs {need} on 200 fresh flights in the stage\'s final world with no help, '
-                f"confirmed on another fresh 200. Cap: {st['cap']} generations (then it moves on anyway).")
+        rule = (f"Every {check_every} generations the champion flies 200 fresh flights in the stage's FINAL world "
+                f"(the ramp at its end, no help, no practice flights). To pass it needs {need}, confirmed on another "
+                f"fresh 200; passing ends the stage at once, even mid-ramp. Cap: {st['cap']} generations "
+                f"(then it moves on anyway).")
+        if ramped:
+            rule += (" The ramp is paced: it moves 3 steps per generation while the champion lands ≥ 90% of its own "
+                     "flights in the current world, 1 step at ≥ 70%, half a step below that.")
     checks = [r for r in stats if r['stage'] == last['stage'] and r.get('check_landed')]
     last_check = (f"Last pass check: {pct(float(checks[-1]['check_landed']), 1)} at generation {checks[-1]['gen']}."
                   if checks else '')
     return {'index': si, 'n_stages': len(names), 'name': plain(st['name']), 'stage_gen': sg, 'cap': st['cap'],
-            'ramp_len': ramp_len, 'ramp_progress': min(1.0, sg / ramp_len) if ramp_len else None,
+            'ramp_len': ramp_len,
+            'ramp_progress': (ramp_t if ramp_t is not None else min(1.0, sg / ramp_len)) if ramp_len else None,
             'world': world_now(st, last), 'rule': rule, 'last_check': last_check, 'expect': st.get('expect', ''),
             'strip': strip}
 
@@ -228,6 +238,12 @@ def speed(stats):
 
 
 EVENT_TEXT = {
+    'deadline': lambda e: ('⏰ Deadline: training stopped', e.get('note', '')),
+    'final_pick': lambda e: (f"Final pick for the test blocks: {os.path.basename(e.get('champion') or '–')}",
+                             '; '.join(f"{os.path.basename(o['champion'])} {pct(o['landed'], 1)}" for o in e.get('others', []))
+                             + ' (each on 1,000 fresh selection flights)'),
+    'test_blocks': lambda e: (('🎯 GOAL MET' if e.get('goal_met') else 'Test blocks flown') +
+                              f": block 1 {pct(e['block1'], 1)}, block 2 {pct(e['block2'], 1)}", os.path.basename(e.get('champion', ''))),
     'run_start': lambda e: ('Run started', e.get('note', '')),
     'stage_start': lambda e: (f"Stage started: {e.get('stage')}", 'Expected: ' + e.get('expect', '')),
     'check_pass': lambda e: (f"Pass check passed in {e.get('stage')}: {pct(e['check']['landed'], 1)}; confirming on 200 more", ''),
@@ -282,7 +298,39 @@ def run_data(name):
             'last_gen': int(stats[-1]['gen']), 'last_t': os.path.getmtime(os.path.join(d, 'stats.csv')),
             'stage': stage_info(cur, stats, events), 'goal': goal_info(stats, events, name), 'trends': trends(stats),
             'speed': speed(stats), 'bands': stage_bands(stats), 'events': event_rows(events),
-            'stats': [{k: r.get(k, '') for k in keep} for r in stats]}
+            'stats': [{k: r.get(k, '') for k in keep} for r in stats], 'now_replay': now_replay(d)}
+
+
+def now_replay(d):
+    p = os.path.join(d, 'dash', 'now.json')
+    out = json.load(open(p)) if os.path.exists(p) else None
+    live = os.path.join(d, 'champion_now.json')
+    if out is not None and os.path.exists(live):
+        try:
+            out['live_gen'] = json.load(open(live))['gen']
+        except ValueError:
+            pass
+    return out
+
+
+def renderer():
+    """Background: re-render the newest champion's flights when a newer champion exists (at most every RENDER_EVERY s)."""
+    last = {}
+    while True:
+        for name in runs():
+            d = os.path.join(RUNS, name)
+            live = os.path.join(d, 'champion_now.json')
+            if not os.path.exists(live) or time.time() - os.path.getmtime(live) > 3600:
+                continue
+            done = os.path.join(d, 'dash', 'now.json')
+            if os.path.exists(done) and os.path.getmtime(done) >= os.path.getmtime(live):
+                continue
+            if time.time() - last.get(name, 0) < RENDER_EVERY:
+                continue
+            last[name] = time.time()
+            subprocess.run(['nice', '-n', '15', os.path.join(ROOT, '.venv/bin/python'), '-m', 'lander.dashreplay', d],
+                           cwd=ROOT, capture_output=True, timeout=600)
+        time.sleep(15)
 
 
 # ------------------------------------------------------------------ page
@@ -316,6 +364,9 @@ h2{font-size:18px;margin:26px 0 8px} h2 .q{color:var(--muted);font-weight:400;fo
 .trend li{margin:3px 0} .chartbox{position:relative;height:340px}
 .multi{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px;margin-top:12px}
 .mini h3{margin:0 0 4px;font-size:14px} .mini .h{position:relative;height:190px}
+.flights{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.flights figure{margin:0} .flights img{width:100%;max-width:420px;border-radius:8px;display:block;cursor:pointer;background:#000}
+.flights figcaption{font-size:13px;margin-top:4px} .ok{color:var(--good);font-weight:650} .bad{color:var(--s2);font-weight:650}
 .ev>div{border-bottom:1px solid var(--line);padding:6px 0} .ev .t{font-size:12px;color:var(--muted)}
 select{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 8px}
 </style></head><body>
@@ -326,6 +377,9 @@ select{background:var(--panel);color:var(--ink);border:1px solid var(--line);bor
 <div class="strip" id="strip"></div>
 <div class="panel" id="stage"></div>
 
+<h3 style="margin:16px 0 6px;font-size:15px">Watch the champion now <span class="q muted" style="font-weight:400;font-size:13px">the newest generation's best network, flying fresh flights (never training seeds) in the world it trains in now</span></h3>
+<div class="panel" id="now"><span class="muted">waiting for the first render…</span></div>
+
 <h2>2 · How far from the goal? <span class="q">the real task: wind 15, turbulence 1.5, boulder, no help</span></h2>
 <div class="panel goal"><div id="goalL"></div><div id="goalR"></div></div>
 
@@ -333,7 +387,7 @@ select{background:var(--panel);color:var(--ink);border:1px solid var(--line);bor
 <div class="panel"><ul class="trend" id="trends"></ul></div>
 <div class="panel" style="margin-top:12px"><h3 style="margin:0 0 2px;font-size:15px">Landed %, all of the run</h3>
 <p class="muted small" style="margin:0 0 6px">Shaded bands are the curriculum stages. Blue dots: the real task (200 fresh flights per check), with its trend
-line (average of the last 5 checks). Orange: pass checks in the stage's own world. Faint aqua: the champion's own training flights. Dashed: the goal.</p>
+line (average of the last 5 checks). Orange: the stage's final world (the pass check, every 10 generations since generation 230; before that only after the ramp). Faint aqua: the champion's own training flights. Dashed: the goal.</p>
 <div class="chartbox"><canvas id="main"></canvas></div></div>
 <div class="multi">
 <div class="panel mini"><h3>Real task: why flights fail (share of 200 per check)</h3><div class="h"><canvas id="c_fail"></canvas></div></div>
@@ -391,6 +445,23 @@ function render(){
     ${rp!=null?`<div class="small muted">ramp: ${Math.round(100*rp)}% done (the settings reach their final values at generation ${st.ramp_len} of the stage)</div><div class="bar"><i style="width:${100*rp}%"></i></div>`:''}
     <p style="margin:6px 0">${esc(st.rule)} ${esc(st.last_check)}</p>
     <p class="muted small" style="margin:0">Expected when the stage was planned: ${esc(st.expect)}</p>`;
+  // 1b · watch it now (only swap the image when the file changes, so a GIF is not restarted by the refresh)
+  const nr=D.now_replay;
+  if(nr&&nr.flights){
+    const key=D.name+':'+nr.gen;
+    if($('now').dataset.key!==key){
+      $('now').dataset.key=key;
+      const c=nr.champ||{};
+      $('now').innerHTML=`<p style="margin:0 0 8px">Champion of generation <b>${nr.gen}</b> (${esc(String(nr.stage||'').replace(/^\d+ /,''))}).
+        On its ${c.n||'–'} training + selection flights this generation it landed <b>${pct(c.landed,0)}</b>
+        (crashed ${pct(c.crashed,0)}, boulder ${pct(c.boulder,0)}, timeout ${pct(c.timeout,0)}).
+        Click a flight to replay it. <span class="muted small" id="nowage"></span></p>
+        <div class="flights">${nr.flights.map(f=>`<figure><img src="/dash/${encodeURIComponent(D.name)}/${f.file}" alt="${esc(f.caption)}" onclick="this.src=this.src.split('?')[0]+'?r='+Date.now()">
+        <figcaption><span class="${f.landed?'ok':'bad'}">${f.landed?'✓':'✗'} ${esc(f.outcome)}</span> · ${esc(f.caption)}</figcaption></figure>`).join('')}</div>`;
+    }
+    const lag=(nr.live_gen??nr.gen)-nr.gen;
+    if($('nowage')) $('nowage').textContent=lag>0?`(the trainer is already at generation ${nr.live_gen}; a new render follows within a few minutes)`:'(the newest champion)';
+  }
   // 2 · goal
   const L=g.latest, B=g.best;
   $('goalL').innerHTML=`<div class="status ${g.status==='reached'?'reached':''}">${esc(g.text)}</div>
@@ -408,7 +479,7 @@ function render(){
   const real=col(rows,'goal_landed',100);
   chart('main',[{label:'real task, 200 fresh flights',data:real,color:css('--s1'),points:true},
     {label:'real task, trend (last 5 checks)',data:rolling(real),color:css('--s1'),width:2.5},
-    {label:'pass checks in the stage world',data:col(rows,'check_landed',100),color:css('--s2'),points:true},
+    {label:"the stage's final world (pass check)",data:col(rows,'check_landed',100),color:css('--s2'),points:true},
     {label:"champion's training flights",data:col(rows,'champ_landed',100),color:css('--s3'),width:1.2,order:3},
     {label:'goal '+pct(g.target),data:span(rows,100*g.target),color:css('--ink'),dash:[6,4],width:1.5}],
     {y:{min:0,max:100,title:{display:true,text:'% landed',color:css('--muted')}},labels:true});
@@ -448,6 +519,19 @@ class H(BaseHTTPRequestHandler):
         try:
             if u.path == '/api/runs':
                 body, ctype = json.dumps(runs()), 'application/json'
+            elif u.path.startswith('/dash/'):
+                _, _, run, f = u.path.split('/', 3)
+                p = os.path.join(RUNS, os.path.basename(run), 'dash', os.path.basename(f))
+                if not (f.endswith('.gif') and os.path.exists(p)):
+                    self.send_error(404); return
+                b = open(p, 'rb').read()
+                self.send_response(200)
+                self.send_header('Content-Type', 'image/gif')
+                self.send_header('Cache-Control', 'max-age=3600')
+                self.send_header('Content-Length', str(len(b)))
+                self.end_headers()
+                self.wfile.write(b)
+                return
             elif u.path == '/api/run':
                 body, ctype = json.dumps(run_data(parse_qs(u.query).get('name', [''])[0])), 'application/json'
             else:
@@ -470,4 +554,5 @@ if __name__ == '__main__':
     if '--runs' in sys.argv:
         RUNS = os.path.abspath(sys.argv[sys.argv.index('--runs') + 1])
     print(f'dashboard on http://localhost:{PORT} (runs from {RUNS})')
+    threading.Thread(target=renderer, daemon=True).start()
     ThreadingHTTPServer(('127.0.0.1', PORT), H).serve_forever()

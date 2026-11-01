@@ -1,6 +1,6 @@
 {
  "name": "N1",
- "note": "Run N1: NEAT from random genomes (16 -> 32 random tanh hidden -> 4; NEAT adds and deletes nodes and connections freely), population 300, ~12 species. Every genome of a generation flies the same seeds; the top 10 re-fly 40 selection seeds. Pay: 0.3 x game score + 300 per landing - 200 per timeout - 100 per boulder touch. Stop when the champion lands >= 95% (200 real-task flights, then 1,000 fresh selection flights), or Friday 2026-11-06 17:00.",
+ "note": "Run N1: NEAT from random genomes (16 -> 32 random tanh hidden -> 4; NEAT adds and deletes nodes and connections freely), population 300, ~12 species. Every genome of a generation flies the same seeds; the top 10 re-fly 40 selection seeds. Pay: 0.3 x game score + 300 per landing - 200 per timeout - 100 per boulder touch. Stop when the champion lands >= 95% (200 real-task flights, then 1,000 fresh selection flights), or Friday 2026-11-06 17:00. Changed at gen 220: ramps are paced by the champion's landing rate, stage 2 mixes in 25% small-boulder flights, and the stage's final world is checked every 10 generations from the start (it can only pass once the ramp is done).",
  "start_hidden": 32,
  "stages": [
   {
@@ -30,7 +30,10 @@
   },
   {
    "name": "2 wind ramp",
-   "world": {},
+   "world": {
+    "boulder_mix": 0.25,
+    "boulder_size": 0.4
+   },
    "ramp": {
     "wind": [
      5,
@@ -58,7 +61,7 @@
     "landed": 0.85,
     "timeout": 0.05
    },
-   "expect": "Over 200 generations the push grows from a steady 5 to the full gusty 15 plus turbulence 1.5. The networks must start using the clean wind estimate (input 16). Expect a dip while the gusts grow, then >= 85% landings in full wind without a boulder."
+   "expect": "Over up to 200 generations the push grows from a steady 5 to the full gusty 15 plus turbulence 1.5. From gen 220 the ramp is paced: it moves 3x faster while the champion lands >= 90% of its flights. From gen 220, 25% of flights also carry a small boulder (40% size) so route learning starts early; those flights do not count for the pace or the pass check. Expect a dip while the gusts grow, then >= 85% landings in full wind without a boulder."
   },
   {
    "name": "3 boulder",
@@ -85,7 +88,7 @@
     "landed": 0.85,
     "timeout": 0.05
    },
-   "expect": "The boulder (layout v3) grows from 40% to full size over 200 generations; 40% of flights are the full real task (rehearsal). The route sensors (inputs 11-15) start to matter. Expect boulder touches to dominate the failures at first, then >= 85% on the real task."
+   "expect": "The boulder (layout v3) grows from 40% to full size over up to 200 generations (paced like the wind ramp); 40% of flights are the full real task (rehearsal). The route sensors (inputs 11-15) start to matter. Expect boulder touches to dominate the failures at first, then >= 85% on the real task."
   },
   {
    "name": "4 real task + hard cases",

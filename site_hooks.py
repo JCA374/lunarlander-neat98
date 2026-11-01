@@ -83,6 +83,7 @@ def replay_gif(policy_path, seed, out, world=None):
     last = _stamp(frames[-1].resize((600, 400)), r).resize((420, 280))
     frames = [f.convert('P', palette=Image.ADAPTIVE, colors=48) for f in frames + [last] * 20]
     frames[0].save(out, save_all=True, append_images=frames[1:], duration=40, optimize=True)
+    return r
 
 
 def models():

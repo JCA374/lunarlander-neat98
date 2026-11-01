@@ -168,3 +168,18 @@ def test_resume_speciation_uses_the_live_threshold(tmp_path, monkeypatch):
     r2 = train.Run(a)
     assert r2.pop.species.species_set_config is r2.config.species_set_config
     assert r2.pop.species.species_set_config.compatibility_threshold == 0.4
+
+
+def test_ramp_pace_counts_only_the_ramped_skill():
+    """Paced ramps (N1 gen 230): 3x at >= 90% landed, 1x at >= 70%, 0.5 below; practice-boulder flights don't count."""
+    import numpy as np
+    from evo.train import Run
+    from lander.env import World
+    w = World(wind=10, boulder_mix=0.25, boulder_size=0.4)
+    mixed = lambda s: np.random.default_rng([s, 17]).random() < 0.25
+    seeds = list(range(200))
+    # every practice flight fails, every other lands: still full speed
+    rs = [{'seed': s, 'landed': not mixed(s)} for s in seeds]
+    assert Run.pace(rs, w) == 3.0
+    assert Run.pace([{'seed': s, 'landed': i % 10 < 8} for i, s in enumerate(seeds)], World(wind=10)) == 1.0
+    assert Run.pace([{'seed': s, 'landed': False} for s in seeds], World(wind=10)) == 0.5

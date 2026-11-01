@@ -1,0 +1,14 @@
+title: 'Episode 01: Evolution starts from nothing'
+kind: prose
+author: ''
+narrator: Kokoro TTS (af_heart)
+narration:
+  narrator: af_heart
+  speed: 0.95
+  paragraph_pause: 0.6
+chapters:
+  ch01: 'Episode 01: Evolution starts from nothing'
+sources:
+  ch01:
+    path: /home/jonas/code/games/lunarlander/neat-v2/podcast/episode-01.md
+    sha1: 93f20622e9654ccc78f8c64dcef8d3cb47ed66eb

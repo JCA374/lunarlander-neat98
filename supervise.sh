@@ -8,7 +8,16 @@ crashes=0
 while true; do
   .venv/bin/python -m evo.train --curriculum "$CUR" --run "$RUN" "$@" >> "logs/run_$RUN.log" 2>&1
   code=$?
-  if [ $code -eq 0 ]; then echo "$(date '+%F %T') clean exit; supervisor done"; exit 0; fi
+  if [ $code -eq 0 ]; then
+    # the run ended by reaching the goal (run_goal) or the deadline (final_pick): fly the two test blocks, once
+    champ=$(.venv/bin/python -c "import json,sys; ev=[json.loads(l) for l in open('runs/$RUN/events.jsonl') if l.strip()]; e=[e for e in ev if e['kind'] in ('run_goal','final_pick')]; t=[e for e in ev if e['kind']=='test_blocks']; print(e[-1]['champion'] if e and not t else '')")
+    if [ -n "$champ" ]; then
+      echo "$(date '+%F %T') test blocks for $champ"
+      for b in 1 2; do .venv/bin/python -m experiments.goal_check "$champ" --block $b --label "NEAT $RUN final" >> "logs/run_$RUN.log" 2>&1; done
+      .venv/bin/python -c "import json,time,sys,os; n=os.path.basename(sys.argv[1])[:-5]; r=[json.load(open(f'results/goal_{n}_b{b}.json')) for b in (1,2)]; open('runs/$RUN/events.jsonl','a').write(json.dumps({'t': time.strftime('%Y-%m-%d %H:%M:%S'), 'kind': 'test_blocks', 'stage_index': -1, 'champion': sys.argv[1], 'block1': r[0]['landed'], 'block2': r[1]['landed'], 'ci1': r[0]['ci'], 'ci2': r[1]['ci'], 'goal_met': min(r[0]['landed'], r[1]['landed']) >= 0.95})+'\n')" "$champ"
+    fi
+    echo "$(date '+%F %T') clean exit; supervisor done"; exit 0
+  fi
   crashes=$((crashes + 1))
   err=$(grep -E "Error|assert" "logs/run_$RUN.log" | tail -1 | tr '"' "'" | cut -c1-200)
   echo "$(date '+%F %T') crashed (exit $code, crash $crashes): $err; restarting in 30 s"

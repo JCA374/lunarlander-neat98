@@ -15,3 +15,5 @@ video/build/
 runs/*/champions/g*.json
 build/
 *.so
+runs/*/dash/
+runs/*/champion_now.json*
