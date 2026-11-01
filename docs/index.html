@@ -10,12 +10,12 @@
 <body>
 <main>
 <header class="hero">
-  <h1>NEAT, from scratch, to 98% landings in wind, turbulence and past a boulder</h1>
+  <h1>NEAT, from scratch, to 95% landings in wind, turbulence and past a boulder</h1>
   <p class="lede">An evolved neural network (NEAT: the network's weights <i>and</i> its wiring evolve) flies Gymnasium's Lunar Lander
-    in strong gusty wind (power 15), turbulence (1.5) and past a boulder floating on the way down. <b>Goal: ≥ 98% landed between
-    the flags on 1,000 unseen flights</b>, confirmed on a second fresh 1,000. The last project reached it with PPO (98.8% / 98.4%);
+    in strong gusty wind (power 15), turbulence (1.5) and past a boulder floating on the way down. <b>Goal: ≥ 95% landed between
+    the flags on 1,000 unseen flights</b>, confirmed on a second fresh 1,000 (the user set 95% on 1 November; the brief said 98%). The last project reached it with PPO (98.8% / 98.4%);
     two projects ago NEAT stalled at ~85%. This time NEAT starts clean (random genomes, no copied pilot), with a curriculum,
-    a network big enough, a fast C++ simulator for training and a fairer boulder layout (v3) that is passable by construction.</p>
+    a network big enough (32 hidden nodes to start, growing and pruning from there) and a fairer boulder layout (v3) that is passable by construction.</p>
   <p class="countdown" id="countdown"></p>
   <p class="muted" id="updated"></p>
 </header>

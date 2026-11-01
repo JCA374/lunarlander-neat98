@@ -39,8 +39,18 @@ hidden layer of random tanh nodes, its size taken from a measurement (below).</l
 <div class="box"><h3>How big must the network be?</h3>
 <p>Before evolving, I measure it: the PPO champion (16→128→128→4, 98.6% on two test blocks) is copied by imitation (DAgger)
 into small networks, 16→8→4, 16→16→4, 16→32→4, 16→16→16→4, and each copy flies 1,000 fresh flights. The smallest that still
-lands ~98% is the size NEAT must be able to reach. <i>Results appear here when measured.</i> These copies are only a
-yardstick; none is ever used as a starting genome.</p></div>
+lands well is the size NEAT must be able to reach. These copies are only a yardstick; none is ever used as a starting genome.</p>
+<div class="tablewrap"><table class="t">
+<tr><th>Network</th><th>Landed, 1,000 fresh flights (v3)</th></tr>
+<tr><td>16→8→4 (copy)</td><td>56.5%</td></tr>
+<tr><td>16→16→4 (copy)</td><td>79.1%</td></tr>
+<tr><td>16→32→4 (copy)</td><td>87.0%</td></tr>
+<tr><td>16→128→128→4 (the PPO original)</td><td>98.9%</td></tr>
+</table></div>
+<p>Each copy had the same imitation budget (10 rounds × 400 flights), so these are lower bounds on what each size can do,
+but the trend is clear: 8 or 16 hidden nodes are not enough. So every NEAT genome starts with <b>32 random hidden nodes</b>
+(16×32 + 32×4 = 640 connections), and NEAT may add nodes and connections <i>and delete them</i> from there. The test stopped
+before the larger sizes when the plan moved straight to NEAT.</p></div>
 <div class="box"><h3>How the champion's network changed</h3>
 <p>Pictures of real champion genomes (nodes, connections, weights) are added here as the run goes, every 25 generations.</p></div>
 </main>
