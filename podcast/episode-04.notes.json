@@ -1,0 +1,5 @@
+["Grid test of the gen-382 champion, 400 analysis flights per cell (results/wind_boulder_grid_g00382_s2_goal.json)",
+ "Calm or light wind: ~85-90% landed even with the full boulder; full wind: 73% without boulder, 53% with",
+ "The bottleneck is strong gusty wind, not the boulder; a restart from 'small rock, no wind' would re-teach a known skill",
+ "Real-task checks on 200 flights swing widely (76% at gen 402, 52% at gen 442): selection uses 1,000 flights",
+ "Open question for you: keep stage 3 in full wind, or ramp wind 10 -> 15 together with the boulder"]
