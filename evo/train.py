@@ -40,7 +40,7 @@ from lander.neatnet import RandomStartGenome, START, to_json, NeatJsonNet, size
 from lander.seeds import TRAIN, CHECK, SELECT, CLONE
 
 GOAL = 0.95
-TH_MIN, TH_MAX = 0.15, 1.0           # species compatibility threshold range
+TH_MIN, TH_MAX = 0.05, 1.0           # species compatibility threshold range (floor 0.15 -> 0.05 at gen 151 of N1: species fell to 3)
 _W = {}
 
 
