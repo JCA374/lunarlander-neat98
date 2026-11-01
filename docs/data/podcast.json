@@ -1,6 +1,31 @@
 {
  "episodes": [
   {
+   "n": 5,
+   "title": "Episode 05: Practising the hard cases, and a plateau",
+   "date": "Sun 01 Nov 2026, 23:58",
+   "minutes": 3.5,
+   "mp3": "../podcast/episode-05.mp3",
+   "notes": [
+    "Stage 3 (boulder) ended at its 400-generation cap at gen 702 without the 85% pass; boulder at full size since gen 578",
+    "Stage 4: the real task with 30% hard cases (flights recent champions failed)",
+    "Real-task checks (200 fresh flights): 63.8% avg for gens 702-762, 67.1% for 772-842; best 73.5% (gen 832), best ever 76% (gen 402)",
+    "Failures on average: crashes ~13%, boulder ~10%, off-pad ~8%, timeouts ~3.5%",
+    "At ~3 points per 100 generations, 95% by Friday needs a change: candidate levers to be measured"
+   ],
+   "transcript": [
+    "This episode covers the last stretch of the night. The boulder stage ended, the final stage began, and the climb slowed down a lot. Let me explain what happened, and then what it means.",
+    "The boulder stage had a simple plan. The rock grows from small to full size as the champion gets better. It reached full size at generation five hundred and seventy eight. But the stage also had a test. It needed eighty five percent on the real task to pass. It never got there. So the stage ended at its time limit, at generation seven hundred and two. Over its last fifty generations, the real task was at about sixty five percent.",
+    "Then the final stage began. This is the real task itself, with full wind, full gusts and the full boulder. It adds one new idea, called hard cases.",
+    "Here is the idea. Most flights are easy for a good pilot. If every flight counts the same, the easy ones drown out the few that matter. So we keep a list of flights that recent champions failed. About three in ten flights in each generation are taken from that list. A network that learns to handle them gets a clear advantage. Teachers do the same thing. You practise the problems you got wrong, not the ones you already know. In the last project this trick lifted the pilot from about ninety three percent to about ninety six.",
+    "So, did it work here? A little. The real task is checked every ten generations, on two hundred fresh flights. In the first sixty generations of this stage, those checks averaged sixty four percent. In the next seventy, sixty seven. The best single check was seventy three and a half percent. The best ever is still seventy six, from much earlier, and that one was probably a lucky draw.",
+    "What goes wrong in the failed flights? About thirteen in a hundred are crashes. About ten touch the boulder. About eight land safely, but beside the pad. And three or four run out of time. So it is not one problem. It is several smaller ones, and most of them come from the strong gusts.",
+    "Now the honest part. The goal is ninety five percent by Friday. At this pace, about three points per hundred generations, we will not get there. This is what a plateau looks like. Evolution keeps the best networks, but each small improvement is harder to find than the one before. And with only two hundred flights per check, a real gain of two points is hidden in the noise.",
+    "There is a second, quieter cause. Each network flies thirty two flights per generation. Two networks of equal skill can differ by several flights just by luck. Evolution then picks the lucky one, not the better one. With more flights per network, or more networks, selection gets cleaner, but each generation costs more time. That is the trade-off at the heart of this method.",
+    "So what's next? There are a few levers. More flights per network, so selection is less noisy. A larger share of hard cases. A reward that punishes the specific failures more, like landing beside the pad. Or a bigger population, so there are more ideas to choose from. I'll propose one to you, measured first, rather than guess. Training keeps running in the meantime."
+   ]
+  },
+  {
    "n": 4,
    "title": "Episode 04: The rock is not the problem",
    "date": "Sun 01 Nov 2026, 22:09",

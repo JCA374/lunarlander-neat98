@@ -1,0 +1,5 @@
+["Stage 3 (boulder) ended at its 400-generation cap at gen 702 without the 85% pass; boulder at full size since gen 578",
+ "Stage 4: the real task with 30% hard cases (flights recent champions failed)",
+ "Real-task checks (200 fresh flights): 63.8% avg for gens 702-762, 67.1% for 772-842; best 73.5% (gen 832), best ever 76% (gen 402)",
+ "Failures on average: crashes ~13%, boulder ~10%, off-pad ~8%, timeouts ~3.5%",
+ "At ~3 points per 100 generations, 95% by Friday needs a change: candidate levers to be measured"]
