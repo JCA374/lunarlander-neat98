@@ -27,7 +27,9 @@ from urllib.parse import urlparse, parse_qs
 ROOT = os.path.dirname(os.path.abspath(__file__))
 RUNS = os.path.join(ROOT, 'runs')
 PORT = 8050
-SITE_ALIVE = json.load(open(os.path.join(ROOT, 'site.json')))['alive_pattern']   # same 'is it training' rule as the site
+SITE = json.load(open(os.path.join(ROOT, 'site.json')))
+SITE_ALIVE = SITE['alive_pattern']           # same 'is it training' rule as the site
+GOAL = SITE['goal']['target']                # the goal line (0.95 since 2026-11-01)
 
 PAGE = r"""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NEAT Lander: training progress</title>
@@ -39,7 +41,7 @@ header{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:10px 16px
 main{padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:12px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px}
 .card h3{margin:0 0 6px;font-size:13px;color:var(--muted);font-weight:600}
-.kpis{display:flex;gap:18px;flex-wrap:wrap}.kpis b{display:block;font-size:20px}
+.kpis{display:flex;gap:14px 22px;flex-wrap:wrap}.kpis b{display:block;font-size:18px}
 .ev{font-size:12px;max-height:300px;overflow:auto}.ev div{border-bottom:1px solid var(--line);padding:3px 0}
 select,button{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 8px}
 </style></head><body>
@@ -51,7 +53,7 @@ select,button{background:var(--panel);color:var(--ink);border:1px solid var(--li
 <div class="card" style="grid-column:1/-1"><div class="kpis" id="kpis"></div></div>
 <div class="card"><h3>Landed: champion's training flights, fresh stage checks, the real task (200 fresh)</h3><div style="position:relative;height:240px"><canvas id="c1"></canvas></div></div>
 <div class="card"><h3>Fitness: best and population mean</h3><div style="position:relative;height:240px"><canvas id="c2"></canvas></div></div>
-<div class="card"><h3>Champion's traps: boulder hits, timeouts, off-pad rests, touchdown speed</h3><div style="position:relative;height:240px"><canvas id="c3"></canvas></div></div>
+<div class="card"><h3>Real-task failures (200 fresh flights per check) and the champion's touchdown speed</h3><div style="position:relative;height:240px"><canvas id="c3"></canvas></div></div>
 <div class="card"><h3>World: wind, turbulence, support (training wheels)</h3><div style="position:relative;height:240px"><canvas id="c4"></canvas></div></div>
 <div class="card"><h3>Network size and species</h3><div style="position:relative;height:240px"><canvas id="c5"></canvas></div></div>
 <div class="card"><h3>Speed: seconds per generation and thousand steps per second</h3><div style="position:relative;height:240px"><canvas id="c6"></canvas></div></div>
@@ -59,7 +61,7 @@ select,button{background:var(--panel);color:var(--ink);border:1px solid var(--li
 </main>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
-const $=id=>document.getElementById(id); const charts={};
+const $=id=>document.getElementById(id); const charts={}; let loaded=false;
 const S=(k,d)=>{try{return localStorage.getItem(k)??d}catch(e){return d}}, P=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
 const C=['#8ea6ff','#69db7c','#ffa94d','#ff8787','#da77f2','#3bc9db'];
 function chart(id, sets, opts={}){
@@ -71,17 +73,25 @@ function chart(id, sets, opts={}){
 }
 async function load(){
   const runs=await fetch('/api/runs').then(r=>r.json());
-  const sel=$('run'); if(!sel.options.length){runs.forEach(r=>sel.add(new Option(r,r))); sel.value=S('run',runs[runs.length-1]); $('win').value=S('win','0');}
+  const sel=$('run');
+  if(!runs.length){$('upd').textContent='no runs yet (waiting for runs/*/stats.csv)';return}
+  const known=[...sel.options].map(o=>o.value);
+  if(known.join()!==runs.join()){const keep=sel.value; sel.innerHTML=''; runs.forEach(r=>sel.add(new Option(r,r)));
+    const want=keep||S('run',''); sel.value=runs.includes(want)?want:runs[runs.length-1];}
+  if(!loaded){$('win').value=S('win','0'); loaded=true}
   const run=sel.value, win=+$('win').value;
-  const d=await fetch('/api/run?name='+run).then(r=>r.json());
+  const d=await fetch('/api/run?name='+encodeURIComponent(run)).then(r=>r.json());
+  if(d.error){$('upd').textContent=d.error;return}
   let rows=d.stats; if(win) rows=rows.slice(-win);
   const pt=(k,s=1)=>rows.filter(r=>r[k]!=null&&r[k]!=='').map(r=>({x:+r.gen,y:s*r[k]}));
   chart('c1',[{label:'champion landed %',data:pt('champ_landed',100)},{label:'fresh check landed %',data:pt('check_landed',100),points:true,color:'#69db7c'},
     {label:'REAL task, 200 fresh %',data:pt('goal_landed',100),points:true,color:'#ffa94d'},
-    {label:'goal 98%',data:rows.length?[{x:+rows[0].gen,y:98},{x:+rows[rows.length-1].gen,y:98}]:[],color:'#ff8787'}],{y:{max:100}});
+    {label:'goal '+Math.round(100*d.goal)+'%',data:rows.length?[{x:+rows[0].gen,y:100*d.goal},{x:+rows[rows.length-1].gen,y:100*d.goal}]:[],color:'#ff8787'}],{y:{min:0,max:100}});
   chart('c2',[{label:'best',data:pt('best')},{label:'mean',data:pt('mean')},{label:'champion',data:pt('champ_fit')}]);
-  chart('c3',[{label:'boulder hits %',data:pt('champ_boulder',100)},{label:'timeouts %',data:pt('champ_timeout',100)},{label:'off-pad %',data:pt('champ_offpad',100)},
-    {label:'touchdown speed',data:pt('champ_touchdown'),y:'y2'}],{y:{beginAtZero:true},y2:true});
+  const crash=rows.filter(r=>r.goal_landed).map(r=>({x:+r.gen,y:100*(1-r.goal_landed-r.goal_boulder-r.goal_timeout-r.goal_offpad)}));
+  chart('c3',[{label:'boulder %',data:pt('goal_boulder',100),points:true,color:'#ff8787'},{label:'crash %',data:crash,points:true,color:'#8ea6ff'},
+    {label:'timeout %',data:pt('goal_timeout',100),points:true,color:'#ffa94d'},{label:'off-pad %',data:pt('goal_offpad',100),points:true,color:'#da77f2'},
+    {label:'touchdown speed (champion, right axis)',data:pt('champ_touchdown'),y:'y2',color:'rgba(105,219,124,.45)'}],{y:{min:0,max:100},y2:true});
   chart('c4',[{label:'wind',data:pt('wind')},{label:'turbulence ×10',data:pt('turbulence',10)},{label:'support ×10',data:pt('support',10)},{label:'boulder on ×10',data:pt('boulder',10)}]);
   chart('c5',[{label:'hidden',data:pt('hidden')},{label:'species ×5',data:pt('species',5)},{label:'connections',data:pt('conns'),y:'y2'}],{y2:true});
   chart('c6',[{label:'s / gen',data:pt('secs')},{label:'k steps / s',data:pt('steps_per_s',0.001),y:'y2'}],{y:{beginAtZero:true},y2:true});
@@ -90,7 +100,7 @@ async function load(){
   $('kpis').innerHTML=[['run',run+(d.alive?' · training':' · stopped')],['generation',last.gen],['stage',last.stage],['champion landed',last.champ_landed?(100*last.champ_landed).toFixed(0)+'%':'–'],
     ['last stage check',lc.check_landed?(100*lc.check_landed).toFixed(0)+'% (gen '+lc.gen+')':'–'],
     ['last real-task check',(g=>g?(100*g.goal_landed).toFixed(1)+'% (gen '+g.gen+')':'–')(d.stats.filter(r=>r.goal_landed).pop())],
-    ['steps',last.steps?(last.steps/1e6).toFixed(1)+' M':'–'],['machine',`load ${d.machine.load} · RAM free ${d.machine.mem_free_gb} GB`],['hidden / conns',(last.hidden||'–')+' / '+(last.conns||'–')],['s / gen',last.secs]]
+    ['steps',last.steps?(last.steps/1e6).toFixed(1)+' M':'–'],['load · RAM free',`${d.machine.load} · ${d.machine.mem_free_gb} GB`],['hidden / conns',(last.hidden||'–')+' / '+(last.conns||'–')],['species',last.species],['s / gen',last.secs]]
     .map(([k,v])=>`<div><span style="color:var(--muted)">${k}</span><b>${v??'–'}</b></div>`).join('');
   $('ev').innerHTML=d.events.slice().reverse().map(e=>{const c=e.check||{};return `<div>${e.t} · gen ${e.gen??'–'} · <b>${e.kind}</b> ${e.stage||''} ${c.landed!=null?'· check '+(100*c.landed).toFixed(0)+'% landed'+(c.score!=null?', score '+Math.round(c.score):'')+', boulder '+(100*c.boulder).toFixed(0)+'%':''}${e.confirm?' · confirm '+(100*e.confirm.landed).toFixed(0)+'%':''}</div>`}).join('');
   $('upd').textContent='updated '+new Date().toLocaleTimeString();
@@ -113,6 +123,11 @@ def runs():
 
 
 def run_data(name):
+    names = runs()
+    if not names:
+        return {'error': 'no runs yet'}
+    if name not in names:                       # missing or unknown (e.g. a run remembered by the browser): the newest
+        name = names[-1]
     d = os.path.join(RUNS, os.path.basename(name))
     with open(os.path.join(d, 'stats.csv')) as f:
         stats = list(csv.DictReader(f))
@@ -122,7 +137,7 @@ def run_data(name):
         e.pop('args', None)
     pat = SITE_ALIVE.replace('{run}', os.path.basename(name))
     alive = subprocess.run(['pgrep', '-f', pat], capture_output=True).returncode == 0
-    return {'stats': stats, 'events': events, 'alive': alive, 'machine': machine()}
+    return {'name': name, 'stats': stats, 'events': events, 'alive': alive, 'machine': machine(), 'goal': GOAL}
 
 
 class H(BaseHTTPRequestHandler):
@@ -131,12 +146,13 @@ class H(BaseHTTPRequestHandler):
         if u.path == '/api/runs':
             body, ctype = json.dumps(runs()), 'application/json'
         elif u.path == '/api/run':
-            body, ctype = json.dumps(run_data(parse_qs(u.query)['name'][0])), 'application/json'
+            body, ctype = json.dumps(run_data(parse_qs(u.query).get('name', [''])[0])), 'application/json'
         else:
             body, ctype = PAGE, 'text/html; charset=utf-8'
         b = body.encode()
         self.send_response(200)
         self.send_header('Content-Type', ctype)
+        self.send_header('Cache-Control', 'no-store')
         self.send_header('Content-Length', str(len(b)))
         self.end_headers()
         self.wfile.write(b)
