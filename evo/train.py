@@ -40,7 +40,9 @@ from multiprocessing import Pool
 import neat
 import numpy as np
 
-from lander.env import World, GOAL_WORLD, run_episode, make_env
+from lander import env as reference
+from lander.env import World, GOAL_WORLD, make_env
+from lander.fastenv import run_episode          # the frozen env.run_episode, same numbers, ~2x faster
 from lander.neatnet import RandomStartGenome, START, to_json, NeatJsonNet, size
 from lander.seeds import TRAIN, CHECK, SELECT, CLONE
 
@@ -51,28 +53,41 @@ TH_MIN, TH_MAX = 0.05, 1.0           # species compatibility threshold range (fl
 _W = {}
 
 
-def _init_worker():
+def _init_worker(sim='python'):
     _W['env'] = make_env()
+    _W['sim'] = sim
+    if sim == 'cpp':
+        from lander import cppenv
+        if not cppenv.available():
+            raise RuntimeError('--sim cpp: sim/lander_sim is not built (run sim/build.sh)')
+        _W['cpp'] = cppenv
 
 
 def fly(args):
-    """Fly one network (a to_json dict) on the given seeds; small per-flight results."""
-    net, seeds, world = args
+    """Fly one network (a to_json dict) on the given seeds; small per-flight results. ref=True: in the reference
+    env (BRIEF section 6: checks and selection never fly a fast env), else in lander/fastenv.py (the same numbers)
+    or, with --sim cpp, in C++ (lander/cppenv.py, tested in results/cpp_equivalence.json)."""
+    net, seeds, world, *ref = args
     pol = NeatJsonNet(net)
+    ref = bool(ref and ref[0])
+    if not ref and _W.get('sim') == 'cpp':
+        rs = _W['cpp'].fly(pol, seeds, world)
+    else:
+        run = reference.run_episode if ref else run_episode
+        rs = [run(pol, s, world, env=_W['env']) for s in seeds]
     out = []
-    for s in seeds:
-        r = run_episode(pol, s, world, env=_W['env'])
+    for s, r in zip(seeds, rs):
         out.append({'seed': s, 'reward': r['reward'], 'landed': r['landed'], 'rested': r['rested'],
                     'outcome': r['outcome'], 'touch': r['touch_speed'], 'steps': r['steps']})
     return out
 
 
 def fly_many(pool, jobs, chunk):
-    """[(net, seeds, world), ...] -> one result list per job; jobs are cut into chunks so all workers stay busy."""
+    """[(net, seeds, world[, ref]), ...] -> one result list per job; jobs are cut into chunks so all workers stay busy."""
     tasks, owner = [], []
-    for j, (net, seeds, world) in enumerate(jobs):
+    for j, (net, seeds, world, *ref) in enumerate(jobs):
         for k in range(0, len(seeds), chunk):
-            tasks.append((net, seeds[k:k + chunk], world)); owner.append(j)
+            tasks.append((net, seeds[k:k + chunk], world, *ref)); owner.append(j)
     out = [[] for _ in jobs]
     for j, rs in zip(owner, pool.imap(fly, tasks, chunksize=1)):
         out[j] += rs
@@ -214,7 +229,7 @@ class Run:
         return path
 
     def _flights(self, seeds, net, world, chunk=10):
-        return fly_many(self.pool, [(net, seeds, world)], chunk)[0]
+        return fly_many(self.pool, [(net, seeds, world, True)], chunk)[0]       # checks and selection: reference env
 
     def check(self, net, world, rw, n=None):
         st = self.state
@@ -257,7 +272,7 @@ class Run:
         # re-fly the top genomes on fresh selection seeds (same world); champion = best average over all its flights
         top = sorted(zip(genomes, res), key=lambda z: -z[0][1].fitness)[:a.reeval_top]
         sel = [SELECT + st['gen'] * 1000 + i for i in range(a.reeval_flights)]
-        more = fly_many(self.pool, [(nets[gid], sel, world) for (gid, _), _ in top], chunk=10)
+        more = fly_many(self.pool, [(nets[gid], sel, world, True) for (gid, _), _ in top], chunk=10)
         steps += sum(r['steps'] for rs in more for r in rs)
         scored = [(summary(rs + m, rw), g, rs) for ((_, g), rs), m in zip(top, more)]
         champ_s, champ, champ_train = max(scored, key=lambda z: z[0]['fitness'])
@@ -437,7 +452,7 @@ class Run:
         self.state['done'] = True
 
     def train(self):
-        with Pool(self.a.workers, initializer=_init_worker) as self.pool:
+        with Pool(self.a.workers, initializer=_init_worker, initargs=(getattr(self.a, 'sim', 'python'),)) as self.pool:
             while not self.state['done'] and not self.stop:
                 if time.time() >= self.a.stop_at:
                     self._event('deadline', note='stopped for the deadline (test blocks before %s)' % SITE_DEADLINE)
@@ -470,6 +485,8 @@ def main():
     ap.add_argument('--check-flights', type=int, default=200)
     ap.add_argument('--target-species', type=int, default=12)
     ap.add_argument('--seed', type=int, default=1)
+    ap.add_argument('--sim', choices=('python', 'cpp'), default='python',
+                    help='training flights: python = lander/fastenv.py (the reference numbers), cpp = sim/lander_sim')
     ap.add_argument('--max-gens', type=int, default=0, help='stop after this many generations (tests)')
     ap.add_argument('--stop-at', default='', help='ISO time to stop and pick a champion (default: site.json deadline - 20 min)')
     a = ap.parse_args()

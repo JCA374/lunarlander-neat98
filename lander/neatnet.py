@@ -13,8 +13,15 @@
 import json
 import os
 
+import math
+
 import neat
 import numpy as np
+
+try:
+    from numba import njit
+except ImportError:                   # no numba: NeatJsonNet falls back to the numpy layers (same actions, slower)
+    njit = None
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TANH_GAIN = 2.5                       # neat-python's tanh is tanh(2.5 z)
@@ -106,6 +113,21 @@ class NeatJsonNet:
         self.v = np.zeros(self.size)
         self.n_hidden = sum(1 for k in nodes if k not in self.outputs)
         self.n_conns = len(conns)
+        # the same layers flattened for _act_kernel: one entry per non-input node in feed-forward order, with its
+        # incoming (source, gain * response * weight) pairs and gain * bias (gain 2.5 for tanh, 1 for identity)
+        rows, tanh_f, b_f, start, src, wt = [], [], [], [0], [], []
+        for layer in layers:
+            for k in sorted(layer):
+                g = TANH_GAIN if nodes[k][2] == 'tanh' else 1.0
+                ins = sorted((idx[a], w) for (a, b), w in conns if b == k and a in idx)
+                rows.append(idx[k]); tanh_f.append(nodes[k][2] == 'tanh'); b_f.append(g * nodes[k][0])
+                src += [i for i, _ in ins]; wt += [g * nodes[k][1] * w for _, w in ins]
+                start.append(len(src))
+        # packed into one int and one float array: numba's call overhead grows with the number of array arguments
+        m = len(rows)
+        self.flat_i = np.array([self.n_in, m, len(self.outputs)] + rows + [int(t) for t in tanh_f] + start + src
+                               + self.out_idx.tolist(), np.int64)
+        self.flat_f = np.concatenate([self.scale.astype(np.float64), b_f, wt, np.zeros(self.size)])
 
     def activate(self, x):
         v = self.v
@@ -118,7 +140,36 @@ class NeatJsonNet:
         return v[self.out_idx]
 
     def __call__(self, v, flight=None):
-        return int(np.argmax(self.activate(v)))
+        if _act_kernel is None:
+            return int(np.argmax(self.activate(v)))
+        return _act_kernel(np.asarray(v, np.float64), self.flat_i, self.flat_f)
+
+
+def _act(x, fi, ff):
+    """The action of NeatJsonNet (argmax of activate()) without numpy's per-call overhead: ~20x faster on a
+    551-connection net. Sums may differ from the matrix product in the last bit, which changes the action only on
+    an exact near-tie of two outputs; flights were checked identical to the numpy path (results/speed_check.json)."""
+    n_in, m, n_out = fi[0], fi[1], fi[2]
+    rows, tanh_f, start = 3, 3 + m, 3 + 2 * m                 # offsets into fi: rows, tanh flags, conn starts,
+    src = start + m + 1                                        # conn sources, output indices
+    out_idx = src + fi[start + m]
+    bias, wt = n_in, n_in + m                                  # offsets into ff: scale, bias, weights, node values
+    v = wt + fi[start + m]
+    for i in range(n_in):
+        ff[v + i] = x[i] / ff[i]
+    for j in range(m):
+        s = ff[bias + j]
+        for c in range(fi[start + j], fi[start + j + 1]):
+            s += ff[wt + c] * ff[v + fi[src + c]]
+        ff[v + fi[rows + j]] = math.tanh(s) if fi[tanh_f + j] else s
+    best = 0
+    for o in range(1, n_out):
+        if ff[v + fi[out_idx + o]] > ff[v + fi[out_idx + best]]:
+            best = o
+    return best
+
+
+_act_kernel = njit(cache=True, nogil=True)(_act) if njit else None
 
 
 def size(genome, n_out=4):

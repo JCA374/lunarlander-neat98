@@ -183,3 +183,49 @@ def test_ramp_pace_counts_only_the_ramped_skill():
     assert Run.pace(rs, w) == 3.0
     assert Run.pace([{'seed': s, 'landed': i % 10 < 8} for i, s in enumerate(seeds)], World(wind=10)) == 1.0
     assert Run.pace([{'seed': s, 'landed': False} for s in seeds], World(wind=10)) == 0.5
+
+
+def _traj(run, pol, seed, world, env):
+    rec = []
+    r = run(lambda v, f: rec.append((tuple(map(float, v)), pol(v, f))) or rec[-1][1], seed, world, env=env)
+    return rec, r
+
+
+@pytest.mark.parametrize('world', [World(wind=0, turbulence=0, support=1.0), World(wind=8, turbulence=0.5, steady=0.5,
+                                   boulder_mix=0.25, boulder_size=0.4), World(), GOAL_WORLD, World(goal_mix=0.5)])
+def test_fast_flight_is_the_frozen_flight(world):
+    """Training flies lander/fastenv.py and the numba NeatJsonNet.__call__; both must give the frozen env.run_episode
+    with numpy's argmax(activate()) step for step: the same 16 inputs, actions, rewards and results."""
+    import random
+    from lander import fastenv
+    from lander.neatnet import to_json, NeatJsonNet
+    cfg = _neat_config()
+    import neat
+    g = next(iter(neat.Population(cfg).population.values()))
+    net = NeatJsonNet(to_json(g, cfg))
+    acts = [random.Random(5).randrange(4) for _ in range(1000)]
+    policies = [(Teacher(), Teacher()), (lambda v, f: int(np.argmax(net.activate(v))), net),
+                (lambda v, f: acts[f.steps], lambda v, f: acts[f.steps])]
+    env = make_env()
+    for slow, fast in policies:
+        for seed in (3, 77, 1234):
+            a, ra = _traj(run_episode, slow, seed, world, env)
+            b, rb = _traj(fastenv.run_episode, fast, seed, world, env)
+            assert a == b and ra == rb
+
+
+@pytest.mark.parametrize('world', [World(wind=0, turbulence=0, support=0.5), World(wind=10, turbulence=1.0, steady=0.3,
+                                   boulder_mix=0.25, boulder_size=0.4), GOAL_WORLD, World(goal_mix=0.5)])
+def test_cpp_flight_is_the_fresh_reference_flight(world):
+    """sim/lander_sim (training only, --sim cpp) gives a fresh reference env's flight bit for bit. (A reused reference
+    env can differ in the last bits after touchdown: Box2D reuses the ids of destroyed bodies.)"""
+    from lander import cppenv
+    from lander.neatnet import to_json, NeatJsonNet
+    if not cppenv.available():
+        pytest.skip('sim/lander_sim not built (sim/build.sh)')
+    import neat
+    cfg = _neat_config()
+    for g in list(neat.Population(cfg).population.values())[:2]:
+        net = NeatJsonNet(to_json(g, cfg))
+        seeds = [11, 222, 3333, 44444]
+        assert cppenv.fly(net, seeds, world) == [run_episode(net, s, world) for s in seeds]
