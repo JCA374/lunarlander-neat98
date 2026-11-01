@@ -74,6 +74,7 @@ function eventHtml(e) {
       default: title = e.kind.replace(/_/g, ' '); body = e.note || '';
     }
   }
+  if (e.replay && e.replay_world) body = (body ? body + '\n' : '') + 'Replay: ' + e.replay_world + '.';
   const img = e.replay ? `<img loading="lazy" src="${e.replay}" title="click to replay" alt="replay of the agent at this moment">` : '';
   return `<div class="ev"><div class="body"><div class="t">${esc(e.t)}${e.run ? ' · run ' + esc(e.run) : ''}</div>
     <h4><span class="tag ${e.kind}">${e.kind.replace(/_/g, ' ')}</span>${esc(title)}</h4><p>${esc(body)}</p></div>${img}</div>`;

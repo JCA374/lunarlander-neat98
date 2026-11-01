@@ -62,12 +62,13 @@ def thin(rows, n=600, keep_keys=()):
     return [r for i, r in enumerate(rows) if i in keep or any(r.get(k) for k in keep_keys)]
 
 
-def replay_for(h, policy, name, seed):
-    """A GIF of one episode of `policy`, rendered once and cached. GIFs play ONCE (no loop); the page replays on click."""
+def replay_for(h, policy, name, seed, world=None):
+    """A GIF of one episode of `policy`, rendered once and cached. GIFs play ONCE (no loop); the page replays on click.
+    `world`: the hook's world for this event (site_hooks.replay_world), e.g. a curriculum stage's own world."""
     path = os.path.join(REPLAYS, name)
     if not os.path.exists(path) and h and hasattr(h, 'replay_gif'):
         try:
-            h.replay_gif(policy, seed, path)
+            h.replay_gif(policy, seed, path, **({'world': world} if world is not None else {}))
         except Exception as ex:                  # a replay must never stop the publisher
             print('replay failed', name, ex)
     return f'replays/{name}' if os.path.exists(path) else None
@@ -124,8 +125,13 @@ def build():
         for i, e in enumerate(events):
             e = dict(e, run=name)
             if e['kind'] in REPLAY_KINDS and e.get('champion'):
-                e['replay'] = replay_for(h, os.path.join(ROOT, e['champion']), f'{name}_{i:04d}.gif',
-                                         CFG.get('replay_seed', 3_000_777_000) + i)
+                rw = h.replay_world(e, cur) if h and hasattr(h, 'replay_world') else None
+                world, caption = rw if rw else (None, None)
+                e['replay'] = replay_for(h, os.path.join(ROOT, e['champion']),
+                                         f'{name}_{i:04d}{"_stage" if world is not None else ""}.gif',
+                                         CFG.get('replay_seed', 3_000_777_000) + i, world)
+                if caption:
+                    e['replay_world'] = caption
             e.pop('args', None)
             log.append(e)
         alive = subprocess.run(['pgrep', '-f', CFG.get('alive_pattern', '^.venv/bin/python .* --run {run}( |$)').format(run=name)],

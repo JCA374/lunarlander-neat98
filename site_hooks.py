@@ -14,8 +14,9 @@ N_GAMES = 12
 GAME_SEED = ANALYSIS + 900_000
 
 
-def _fly_frames(policy_path, seed, every=2):
-    """One real-task flight with the wind drawn (lander/viz.py); returns frames (PIL 600x400) and the result."""
+def _fly_frames(policy_path, seed, every=2, world=None):
+    """One flight with the wind drawn (lander/viz.py), in the real task unless `world` is given; returns frames
+    (PIL 600x400) and the result."""
     from lander.env import GOAL_WORLD, run_episode, make_env
     from lander.policy import load_policy
     from lander.viz import Painter
@@ -26,7 +27,7 @@ def _fly_frames(policy_path, seed, every=2):
     def rec(f):
         if f.steps % every == 0:
             frames.append(painter.paint(env, f))
-    r = run_episode(lambda v, f: pol(v, None), seed, GOAL_WORLD, env=env, record=rec)
+    r = run_episode(lambda v, f: pol(v, None), seed, world or GOAL_WORLD, env=env, record=rec)
     env.close()
     return frames, r
 
@@ -50,10 +51,34 @@ def _stamp(img, r):
     return img
 
 
-def replay_gif(policy_path, seed, out):
+STAGE_EVENTS = {'stage_pass', 'check_pass', 'stage_cap'}
+
+
+def replay_world(event, curriculum):
+    """Which world a log replay flies. A curriculum-stage event shows the champion in THAT stage's world (its final
+    settings, no training wheels: what the pass check flew), not in the real task it has not met yet. Everything else
+    (best real-task check, goal checks) flies the real task. Returns (World or None for the real task, caption)."""
+    if event.get('kind') not in STAGE_EVENTS or not curriculum:
+        return None, 'the real task (wind 15, turbulence 1.5, boulder, no help), the world this check measured'
+    from evo.train import check_world
+    i = event.get('stage_index')
+    stages = curriculum.get('stages', [])
+    if i is None or not 0 <= i < len(stages):
+        return None, 'the real task (wind 15, turbulence 1.5, boulder, no help)'
+    w = check_world(stages[i])
+    parts = ['calm air' if w.wind == 0 else f'wind {w.wind:g}' + (', mostly steady' if w.steady >= 0.5 else '')]
+    if w.wind and w.turbulence:
+        parts.append(f'turbulence {w.turbulence:g}')
+    parts.append(f'boulder at {w.boulder_size:.0%} size' if w.boulder and w.boulder_size < 1 else
+                 'boulder' if w.boulder else 'no boulder')
+    parts.append('no training wheels')
+    return w, f"this stage's world ({', '.join(parts)}), as in its pass check"
+
+
+def replay_gif(policy_path, seed, out, world=None):
     """GIF for the log: plays ONCE (no loop argument) and ends on the outcome; the page replays it on click."""
     from PIL import Image
-    frames, r = _fly_frames(policy_path, seed)
+    frames, r = _fly_frames(policy_path, seed, world=world)
     frames = [f.resize((420, 280)) for f in frames]
     last = _stamp(frames[-1].resize((600, 400)), r).resize((420, 280))
     frames = [f.convert('P', palette=Image.ADAPTIVE, colors=48) for f in frames + [last] * 20]
