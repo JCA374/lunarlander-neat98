@@ -30,7 +30,31 @@ whole batch with no Python in the loop.</p>
 <p><b>The rule that keeps it honest:</b> the C++ simulator is for training only, after a test shows the same seeds and actions
 give the same outcome on ≥ 98% of 1,000 flights and the same agent's landing rate falls inside the reference's confidence
 interval. All checks, the selection and the goal test run in the Python reference.</p></div>
-<div class="box"><h3>Measurements</h3><p><i>Profiles and before/after timings appear here as they are made.</i></p></div>
+<div class="box"><h3>Measurements (2026-11-01, run N1, 7 workers)</h3>
+<p>End to end, from <code>runs/N1/stats.csv</code> (median over the generations in each phase; every generation is 300
+genomes × 24 flights plus the top 10 re-flown on 40 selection flights):</p>
+<div class="tablewrap"><table class="t">
+<tr><th>Training flights in</th><th>Generations</th><th>Seconds / generation</th><th>Steps / s</th><th>Generations / hour</th></tr>
+<tr><td>Reference Python env, numpy network</td><td>236–251</td><td>95.0</td><td>32,500</td><td>38</td></tr>
+<tr><td>Fast Python path + numba network (same numbers bit for bit)</td><td>252–266</td><td>47.9</td><td>67,600</td><td>75</td></tr>
+<tr><td>C++ simulator + C++ network</td><td>267–</td><td>18.4</td><td>166,600</td><td>~195</td></tr>
+</table></div>
+<p><b>5.2× faster end to end</b>, short of the 10× target. The profile says why: the old figure of 1.5 µs for Box2D was wrong
+for this env. gymnasium asks Box2D for 180 velocity and 60 position iterations per step, and box2d-py's own
+<code>world.Step</code> measured about a third of the whole Python step. C++ removes the Python around it, not the solver,
+and fewer iterations would change the physics.</p>
+<p><b>What changed.</b> (1) <code>NeatJsonNet</code> picks its action with a numba kernel: 5 µs instead of 46 µs per call on a
+551-connection network, the same action. (2) <code>lander/fastenv.py</code>: the frozen flight minus gymnasium's wrapper layers,
+numpy scalar maths and per-step RNG calls; step-by-step identical inputs, actions and results (test in
+<code>tests/test_core.py</code>). (3) <code>sim/lander_sim.cpp</code>: the same Box2D 2.3.x source box2d-py 2.3.5 wraps, the
+world rebuilt in gymnasium's order, every random number drawn in Python with gymnasium's own RNG, the network in C++.
+<code>lander/env.py</code> is untouched (its sha256 test still passes).</p>
+<p><b>The equivalence test</b> (<code>experiments/cpp_equivalence.py</code>, <code>results/cpp_equivalence.json</code>): the gen-266
+champion on 1,000 analysis seeds in three worlds (the real task, the stage-2 wind world, calm air). The C++ flights are
+<b>bit-identical to a fresh reference env on 3,000 of 3,000</b>. Against a reused reference env the outcome matches on
+99.9%, 99.7% and 100%, exactly as often as the reference matches itself: a reused env differs in the last bits after
+touchdown because Box2D reuses the ids of destroyed bodies. Landing rates are inside the reference's confidence interval in
+all three worlds. Checks, the selection re-flights and the goal test still fly the reference env.</p></div>
 </main>
 <script src="site.js?v=7911142a"></script>
 <script src="common.js?v=448bd7f6"></script>
