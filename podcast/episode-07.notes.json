@@ -1,0 +1,5 @@
+["Re-measured champions on the same 1,000 flights: gen 2462 lands 88.1%, champions since then 80.7-86.5%, newest (gen 3402) 83.0%",
+ "Cause: fitness from 32 flights has a ~6-point standard error near 85%, so evolution cannot rank parents 2-5 points apart",
+ "Fix from gen 3431: 64 flights per genome (variance halved, ~4.5-point error); generations ~2x slower, ~9,000 left",
+ "The final pick still re-flies the best-checked champions (gen 2462 included) on 1,000 fresh flights",
+ "Best pilot's failures: crashes ~6%, boulder ~4%, off-pad ~1%, timeouts ~1%"]
