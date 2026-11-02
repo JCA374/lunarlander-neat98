@@ -17,7 +17,7 @@ async function main() {
   const metric = (C.goal || {}).metric || 'landed', target = (C.goal || {}).target;
   const rows = [];
   for (const [k, r] of Object.entries(status.goals || {})) rows.push([r.label || k, r, r.note || 'goal check']);
-  for (const [k, r] of Object.entries(status.baselines || {})) rows.push([(C.names || {})[k] || k, r, 'baseline']);
+  for (const [k, r] of Object.entries(status.baselines || {})) rows.push([(C.names || {})[k] || r.label || k, r, r.note || 'baseline']);
   for (const [k, r] of Object.entries(status.bakeoff || {})) rows.push([(C.names || {})[k] || k, r, 'bake-off']);
   rows.sort((a, b) => (b[1][metric] ?? 0) - (a[1][metric] ?? 0));
   const extra = (C.goal || {}).columns || [];
@@ -31,7 +31,9 @@ async function main() {
     const l = main.last || {};
     const card = (c) => { let v = l[c.key]; if (c.fmt === 'pct') v = pct(+v); if (c.fmt === 'M') v = v ? (v / 1e6).toFixed(1) + ' M' : '–'; return [c.label, v ?? '–', c.sub || '']; };
     $('cards').innerHTML = [['Run', main.run, main.alive ? 'training now' : 'stopped'], ['Stage', l.stage || '–', `${main.passed.length} stage(s) passed`],
-      ...(C.cards || []).map(card), ['Best check', main.best_goal ? pct(main.best_goal[metric]) : '–', 'best of many: flatters']]
+      ...(C.cards || []).map(card), ['Best check', main.best_goal ? pct(main.best_goal[metric]) : '–', 'best of many 200-flight checks: flatters'],
+      ...(() => { const b = Object.values(status.baselines || {}).filter((r) => (r.label || '').includes(main.run)).sort((x, y) => y[metric] - x[metric])[0];
+        return b ? [['Best measured', pct(b[metric]), `${b.label.replace(/^.*generation /, 'gen ')} on ${b.n} unseen flights`]] : []; })()]
       .map(([k, v, s]) => `<div class="card"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="s">${esc(s)}</div></div>`).join('');
     chart((stats || {})[main.run] || [], main.run, C.chart || {}, target);
   }
@@ -49,7 +51,8 @@ function chart(rows, run, cfg, target) {
   const yMin = ys.length ? Math.max(0, Math.floor((Math.min(...ys) - 2) / 5) * 5) : 0;     // autoscale
   const yMax = cfg.y_max ?? Math.ceil((Math.max(...ys, target ? 100 * target : 0) + 1) / 2) * 2;
   if (target) ds.push({ label: `goal ${pct(target, 0)}`, data: [{ x: X(rows[0]), y: 100 * target }, { x: X(rows[rows.length - 1]), y: 100 * target }], borderColor: cssv('--bad'), borderDash: [5, 4], borderWidth: 1, pointRadius: 0 });
-  $('chartnote').textContent = `Run ${run}. x axis: ${cfg.x_label || cfg.x || 'iteration'}.`;
+  const fl = [...new Set(rows.map((r) => r.flights).filter(Boolean))].join(' → ');
+  $('chartnote').textContent = `Run ${run}. x axis: ${cfg.x_label || cfg.x || 'iteration'}. Training flights per genome: ${fl}.`;
   new Chart($('chart'), { type: 'line', data: { datasets: ds }, options: { animation: false, maintainAspectRatio: false,
     interaction: { mode: 'nearest', intersect: false },
     scales: { x: { type: 'linear', ticks: { color: cssv('--muted') }, grid: { color: cssv('--line') } },

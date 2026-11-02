@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lander NEAT 98: Log</title>
-<meta name="description" content="NEAT learns to land a lunar lander in wind, turbulence and past a fair boulder: 98% of unseen flights. Live log.">
+<meta name="description" content="NEAT learns to land a lunar lander in wind, turbulence and past a fair boulder: 95% of unseen flights. Live log.">
 <link rel="stylesheet" href="style.css?v=ea0a339d">
 </head>
 <body>
@@ -28,7 +28,7 @@
 <section>
   <h2>Progress</h2>
   <p class="muted">The current run, per generation. Orange dots: the generation's champion on 200 fresh real-task flights.
-    Blue line: the champion's own training flights (the stage's world, so early on easier than the real task). Dashed: the 98% goal.</p>
+    Blue line: the champion's own training flights (the stage's world, so early on easier than the real task). Dashed: the 95% goal. A single 200-flight check swings several points by luck, so the table below re-flies selected champions on the same 1,000 unseen flights: that is the fair comparison.</p>
   <div class="chartbox"><div class="h"><canvas id="chart"></canvas></div></div>
   <p class="muted small" id="chartnote"></p>
 </section>
@@ -43,8 +43,8 @@
 <footer>Updated automatically every 15 minutes. Numbers are measured, not estimated; "fresh" means seeds never used in training or selection. Checks and the goal test always run in the reference Python simulator.</footer>
 <script src="site.js?v=7911142a"></script>
 <script src="common.js?v=448bd7f6"></script>
-<script src="project.js?v=9956469d"></script>
+<script src="project.js?v=7c81d53d"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="app.js?v=301a82e1"></script>
+<script src="app.js?v=f52d6731"></script>
 </body>
 </html>

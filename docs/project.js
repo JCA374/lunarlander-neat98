@@ -30,6 +30,10 @@ window.passText = function passText(p = {}) {
 window.eventText = (e) => {
   const at = e.gen != null ? ` at generation ${e.gen}` : '';
   if (e.kind === 'goal_best') return [`Best real-task check so far${at}`, `${pct(e.check.landed)} landed of ${e.check.n}; off-pad ${pct(e.check.offpad)}, crash ${pct(e.check.crashed)}, boulder ${pct(e.check.boulder)}, timeout ${pct(e.check.timeout)}\nA best-of-many check flatters (winner's curse); claims are re-measured on more seeds.`];
+  if (e.kind === 'override') {
+    const what = [e.flights ? `${e.flights} flights per genome` : '', e.next_stage ? 'next stage' : ''].filter(Boolean).join(', ') || 'settings';
+    return [`Manual change${at}: ${what}`, e.reason || ''];
+  }
   if (e.kind === 'time_limit') return [`Time limit reached (${e.minutes} min)`, ''];
   return null;
 };

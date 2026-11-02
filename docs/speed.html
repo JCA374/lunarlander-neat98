@@ -39,7 +39,14 @@ genomes × 24 flights plus the top 10 re-flown on 40 selection flights):</p>
 <tr><td>Fast Python path + numba network (same numbers bit for bit)</td><td>252–266</td><td>47.9</td><td>~54</td><td>67,600</td></tr>
 <tr><td>C++ simulator + C++ network</td><td>267–312</td><td>18.4</td><td>26.8</td><td>166,600</td></tr>
 <tr><td>+ faster NEAT crossover and distance (same children and species)</td><td>313–</td><td>17.0</td><td>~19</td><td>160,000</td></tr>
+<tr><td>Stage 4, 32 flights per genome (real task, longer flights)</td><td>3300–3430</td><td>19.7</td><td>~21</td><td>207,000</td></tr>
+<tr><td>Stage 4, <b>64 flights per genome</b> (from gen 3431, on purpose)</td><td>3480–</td><td>36.6</td><td>~38</td><td>237,000</td></tr>
 </table></div>
+<p><b>Why slower on purpose (2 November, gen 3431).</b> Speed is only worth something if the extra generations point the
+right way. Re-flying champions on the same 1,000 flights showed the run had lost its best genome (88.1% at gen 2462, 83% at
+gen 3402): with 32 flights a genome's fitness has a ~6-point standard error near 85%, too coarse to rank parents 2–5 points
+apart. 64 flights halve the variance at twice the cost per generation (~95 instead of ~180 generations an hour). The first
+result: the gen-3582 champion lands 90.1% on those 1,000 flights, the best measured so far.</p>
 <p>"Flying" is <code>evaluate()</code> (the <code>secs</code> column of stats.csv); "wall" also counts NEAT's reproduction and
 speciation in the main process, while the workers wait: ~6 s per generation in neat-python 2.0, ~1.5 s after overriding
 its crossover cycle check (it rescanned every connection for every inherited gene) and its genome distance. Wall time for the
@@ -70,10 +77,18 @@ champion on 1,000 analysis seeds in three worlds (the real task, the stage-2 win
 99.9%, 99.7% and 100%, exactly as often as the reference matches itself: a reused env differs in the last bits after
 touchdown because Box2D reuses the ids of destroyed bodies. Landing rates are inside the reference's confidence interval in
 all three worlds. Checks, the selection re-flights and the goal test still fly the reference env.</p></div>
+<div class="box"><h3>Which fast language? A bake-off (2026-11-01)</h3>
+<p>Box2D only exists in C++, so the simulator had to be C++. For future projects the same question was tested on a small
+copy of a typical hot loop (a batch of flights of a point lander with a tanh network, argmax action and sine wind), written
+five times behind one C interface: Python (the truth), numba, C++, Rust and Go.</p>
+<p><b>All four fast versions were bit-identical to Python</b> on 200 flights (with fused multiply-add turned off in C++ and Go,
+which would otherwise change the last bits), and about 20–55× faster than Python on one thread. The speed ranking between them
+is not trustworthy yet: it was measured while this training used every core (load ~13), so it needs a rerun on an idle
+machine. The kit now lives in a reusable skill (<code>ml-speedup</code>) so the next project starts with the bake-off.</p></div>
 </main>
 <script src="site.js?v=7911142a"></script>
 <script src="common.js?v=448bd7f6"></script>
-<script src="project.js?v=9956469d"></script>
+<script src="project.js?v=7c81d53d"></script>
 
 </body>
 </html>
