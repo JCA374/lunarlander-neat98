@@ -239,6 +239,11 @@ class NeatJsonNet:
                 v[ir] = iW @ v + ib
         return v[self.out_idx]
 
+    def node_values(self):
+        """Every node's value after the last call (inputs scaled), indexed by self.idx. The numba kernel keeps them
+        at the end of flat_f, the numpy path in self.v."""
+        return self.v if _act_kernel is None else self.flat_f[len(self.flat_f) - self.size:]
+
     def __call__(self, v, flight=None):
         if _act_kernel is None:
             return int(np.argmax(self.activate(v)))

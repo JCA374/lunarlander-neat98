@@ -133,8 +133,9 @@ def _fly_recorded(net, keys, seed, world):
         if len(frames) < 600 and f.steps % 2 == 0:
             u = env.unwrapped
             p = u.lander.position
+            nv = net.node_values()
             frames.append({'x': round(p.x, 2), 'y': round(p.y, 2), 'a': round(u.lander.angle, 3), 'act': a,
-                           'v': [round(float(net.v[net.idx[k]]), 2) if k in net.idx else 0 for k in keys]})
+                           'v': [round(float(nv[net.idx[k]]), 2) if k in net.idx else 0 for k in keys]})
         return a
     r = run_episode(pol, seed, world, env=env)
     u = env.unwrapped

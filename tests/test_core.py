@@ -141,6 +141,24 @@ def test_neat_json_net_matches_neat_python():
         assert np.allclose([ref.activate(list(x / me.scale)) for x in X], [me.activate(x) for x in X])
 
 
+def test_node_values_are_the_last_call_s():
+    """The Model page's "watch it think" reads every node's value after each action (lander/netviz.py). The fast
+    (numba) call keeps them in its own buffer: node_values() must return them, not the unused numpy buffer (which
+    stayed all zero and froze the drawing)."""
+    import neat
+    from lander.neatnet import to_json, NeatJsonNet
+    cfg = _neat_config()
+    g = list(neat.Population(cfg).population.values())[0]
+    for _ in range(30):
+        g.mutate(cfg.genome_config)
+    me, ref = NeatJsonNet(to_json(g, cfg)), NeatJsonNet(to_json(g, cfg))
+    for x in np.random.default_rng(3).normal(0, 1, (20, 16)):
+        me(x)
+        ref.activate(x)
+        assert np.abs(me.node_values()).max() > 0
+        assert np.allclose(me.node_values(), ref.v)
+
+
 def test_neat_start_is_random_not_copied():
     """Clean start: 32 hidden nodes, 640 connections, and two genomes have different weights."""
     import neat
