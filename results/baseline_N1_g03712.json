@@ -1,0 +1,17 @@
+{
+ "t": "2026-11-02 20:46:21",
+ "policy": "runs/N1/champions/g03712_s3_goal.json",
+ "n": 1000,
+ "seeds": "ANALYSIS+900000..+999",
+ "label": "NEAT N1 champion, generation 3712",
+ "note": "same 1,000 unseen analysis flights for every champion",
+ "landed": 0.913,
+ "offpad": 0.007,
+ "crashed": 0.038,
+ "boulder": 0.038,
+ "timeout": 0.004,
+ "ci": [
+  0.8939131380174493,
+  0.9289258437501923
+ ]
+}
