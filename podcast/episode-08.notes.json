@@ -1,0 +1,6 @@
+["The drift came back near 90%: on the same 1,000 flights, gen 3832 landed 93.0%, newer champions 92.4, 89.0, 88.0 and 86.3%",
+ "Why: with 64 flights a score still wobbles ~3.7 points by luck, more than the 1-3 point gains left; precision has to grow as the learner improves",
+ "Fix at gen 4300 (clean stop and restart): 128 flights per genome; ~60-70 s per generation",
+ "Fixed: the deadline pick now includes the best pilots measured on 1,000 flights, not only the best checks",
+ "First 95% check (gen 4402) -> 92.4% on 1,000 fresh flights: the winner's curse",
+ "Last hour of checks averaged 92.8%; remaining failures ~4 crashes and ~3.5 boulder touches per 100"]
