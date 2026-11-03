@@ -171,6 +171,26 @@ def to_json(genome, config):
             'conns': [[a, b, c.weight] for (a, b), c in genome.connections.items() if c.enabled]}
 
 
+def from_json(d, config, key):
+    """A to_json() dict back to a neat-python genome (to put a saved champion back into a population). Node and
+    connection values are copied; other attributes (time_constant) get fresh defaults; connections get the
+    population's innovation numbers for their (in, out) pair, so crossover lines them up with existing genes.
+    Disabled connections are not in the dict and are not restored."""
+    gc = config.genome_config
+    g = config.genome_type(key)
+    for k, (bias, resp, act) in d['nodes'].items():
+        n = gc.node_gene_type(int(k))
+        n.init_attributes(gc)
+        n.bias, n.response, n.activation, n.aggregation = bias, resp, act, 'sum'
+        g.nodes[int(k)] = n
+    for a, b, w in d['conns']:
+        c = gc.connection_gene_type((a, b), gc.innovation_tracker.get_innovation_number(a, b, 'add_connection'))
+        c.init_attributes(gc)
+        c.weight, c.enabled = w, True
+        g.connections[(a, b)] = c
+    return g
+
+
 class NeatJsonNet:
     """Feed-forward evaluation of a to_json() dict, compiled to one small matrix product per layer (the old project
     measured neat-python's activate() at 70% of all training time; this was ~10x faster). Same maths as

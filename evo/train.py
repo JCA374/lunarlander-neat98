@@ -427,6 +427,10 @@ class Run:
         if o.get('next_stage'):
             self._next_stage(passed=False)
             self.state['stage_gen'] += 1
+        if o.get('inject'):
+            n = inject(self.pop, self.config, [json.load(open(p)) for p in o['inject']], o.get('copies', 5),
+                       random.Random(self.state['gen']))
+            print(f'injected {n} genomes from {len(o["inject"])} saved champions', flush=True)
 
     def _final_pick(self):
         """The deadline came first: pick the champion to test. Every check's best is flattered by luck (the winner's
@@ -477,6 +481,23 @@ class Run:
                     self._save()
         self._save()
         print('finished (goal or deadline)' if self.state['done'] else 'stopped', flush=True)
+
+
+def inject(pop, config, champs, copies, rng):
+    """Put saved champions back into the population (they were lost to noisy selection, journal 2026-11-03): each
+    replaces `copies` random genomes, one exact copy and the rest mutated once; then the population is re-speciated
+    so they can form their own species. Returns the number of genomes replaced."""
+    from lander.neatnet import from_json
+    keys = rng.sample(sorted(pop.population), len(champs) * copies)
+    for i, d in enumerate(champs):
+        for j in range(copies):
+            k = keys[i * copies + j]
+            g = from_json(d, config, k)
+            if j:
+                g.mutate(config.genome_config)
+            pop.population[k] = g
+    pop.species.speciate(config, pop.population, pop.generation)
+    return len(keys)
 
 
 def main():

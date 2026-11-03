@@ -159,6 +159,35 @@ def test_node_values_are_the_last_call_s():
         assert np.allclose(me.node_values(), ref.v)
 
 
+def test_injected_champion_flies_like_the_saved_one():
+    """evo.train.inject: a saved champion put back into a population flies exactly like its JSON, the population
+    keeps its size, and NEAT can breed from it (one generation runs)."""
+    import neat
+    from lander.neatnet import to_json, NeatJsonNet
+    from evo.train import inject
+    import random
+    cfg = _neat_config()
+    pop = neat.Population(cfg)
+    src = list(pop.population.values())[0]
+    for _ in range(40):
+        src.mutate(cfg.genome_config)
+    d = to_json(src, cfg)
+    pop2 = neat.Population(cfg)
+    n0 = len(pop2.population)
+    assert inject(pop2, cfg, [d], 4, random.Random(0)) == 4
+    assert len(pop2.population) == n0
+    X = np.random.default_rng(4).normal(0, 1, (300, 16))
+    ref = NeatJsonNet(d)
+    exact = [g for g in pop2.population.values() if to_json(g, cfg)['conns'] == d['conns']]
+    assert exact and all(NeatJsonNet(to_json(exact[0], cfg))(x) == ref(x) for x in X)
+
+    def fit(genomes, config):
+        for _, g in genomes:
+            g.fitness = random.random()
+    pop2.run(fit, 1)
+    assert len(pop2.population) >= n0 - 5
+
+
 def test_neat_start_is_random_not_copied():
     """Clean start: 32 hidden nodes, 640 connections, and two genomes have different weights."""
     import neat
