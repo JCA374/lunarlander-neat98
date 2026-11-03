@@ -1,0 +1,65 @@
+title: What PPO does that NEAT does not
+kind: voiceover
+author: ''
+narrator: Kokoro TTS (af_heart)
+narration:
+  narrator: af_heart
+  speed: 1.05
+  paragraph_pause: 0.6
+chapters:
+  ch01: Two pilots
+  ch02: The scoreboard
+  ch03: How NEAT learns
+  ch04: Every step counts
+  ch05: The critic
+  ch06: Better or worse than expected
+  ch07: 'Gradients: every weight gets a direction'
+  ch08: Small, careful steps
+  ch09: Exploring
+  ch10: What NEAT has that PPO does not
+  ch11: Why this matters here
+sources:
+  ch01:
+    path: /home/jonas/code/games/lunarlander/neat-v2/video/ppo_vs_neat/script.md
+    sha1: 7cd01e5dfe0e6ece2aa33578b532f413341440a7
+    section: Two pilots
+  ch02:
+    path: /home/jonas/code/games/lunarlander/neat-v2/video/ppo_vs_neat/script.md
+    sha1: 7cd01e5dfe0e6ece2aa33578b532f413341440a7
+    section: The scoreboard
+  ch03:
+    path: /home/jonas/code/games/lunarlander/neat-v2/video/ppo_vs_neat/script.md
+    sha1: 7cd01e5dfe0e6ece2aa33578b532f413341440a7
+    section: How NEAT learns
+  ch04:
+    path: /home/jonas/code/games/lunarlander/neat-v2/video/ppo_vs_neat/script.md
+    sha1: 7cd01e5dfe0e6ece2aa33578b532f413341440a7
+    section: Every step counts
+  ch05:
+    path: /home/jonas/code/games/lunarlander/neat-v2/video/ppo_vs_neat/script.md
+    sha1: 7cd01e5dfe0e6ece2aa33578b532f413341440a7
+    section: The critic
+  ch06:
+    path: /home/jonas/code/games/lunarlander/neat-v2/video/ppo_vs_neat/script.md
+    sha1: 7cd01e5dfe0e6ece2aa33578b532f413341440a7
+    section: Better or worse than expected
+  ch07:
+    path: /home/jonas/code/games/lunarlander/neat-v2/video/ppo_vs_neat/script.md
+    sha1: 7cd01e5dfe0e6ece2aa33578b532f413341440a7
+    section: 'Gradients: every weight gets a direction'
+  ch08:
+    path: /home/jonas/code/games/lunarlander/neat-v2/video/ppo_vs_neat/script.md
+    sha1: 7cd01e5dfe0e6ece2aa33578b532f413341440a7
+    section: Small, careful steps
+  ch09:
+    path: /home/jonas/code/games/lunarlander/neat-v2/video/ppo_vs_neat/script.md
+    sha1: 7cd01e5dfe0e6ece2aa33578b532f413341440a7
+    section: Exploring
+  ch10:
+    path: /home/jonas/code/games/lunarlander/neat-v2/video/ppo_vs_neat/script.md
+    sha1: 7cd01e5dfe0e6ece2aa33578b532f413341440a7
+    section: What NEAT has that PPO does not
+  ch11:
+    path: /home/jonas/code/games/lunarlander/neat-v2/video/ppo_vs_neat/script.md
+    sha1: 7cd01e5dfe0e6ece2aa33578b532f413341440a7
+    section: Why this matters here
