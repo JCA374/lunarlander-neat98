@@ -1,0 +1,6 @@
+["NEAT = evolution (breed, select, mutate, grow structure); PPO = reinforcement learning (credit each step, nudge every weight)",
+ "Calm-air NEAT: solved with no hidden neurons; NEAT in wind: best 85% (6 setups); NEAT with curriculum + cloned pilot: stalled ~85%",
+ "PPO project: 45-min bake-off won by PPO from scratch (91.4% vs 87.8% warm PPO, 83.4% ES); goal 98.8% / 98.4% after ~4.5 h and 254 M steps",
+ "This project: best NEAT ever, 93.0% on 1,000 flights, after >30 billion steps (>100x PPO)",
+ "Why: PPO learns from every step via a critic and advantages; NEAT gets one noisy number per flight (flights per network 32 -> 64 -> 128)",
+ "NEAT's strengths: tiny networks (41 hidden, 110 connections vs ~19,000 weights), no gradients, parallel; a film on the site explains PPO step by step"]
