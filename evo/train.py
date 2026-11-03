@@ -437,6 +437,12 @@ class Run:
         paths = [e['champion'] for e in best]
         tracks = sorted(glob.glob(os.path.join(self.dir, 'champions', '*_track.json')))
         paths += [p for p in tracks[-1:] if p not in paths]
+        # plus the 5 best on the same 1,000 analysis flights (experiments/remeasure.py): a less lucky check can hide
+        # the best pilot (gen 3832: 93.0% measured, its check 92% was not a best)
+        run = os.path.basename(self.dir)
+        meas = [json.load(open(p)) for p in glob.glob(os.path.join('results', f'baseline_{run}_g*.json'))]
+        paths += [m['policy'] for m in sorted(meas, key=lambda m: -m['landed'])[:5]
+                  if os.path.exists(m['policy']) and m['policy'] not in paths]
         scored = []
         if not paths:
             self._event('final_pick', champion=None, note='deadline reached before any real-task check')
